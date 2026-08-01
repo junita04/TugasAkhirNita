@@ -1,4 +1,5 @@
 from pathlib import Path # untuk membaca folder dan file
+import os
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2] # mencari folder utama
 
@@ -23,3 +24,11 @@ SPARK_EVENT_LOG = True # mencatat history (True) kalau tidak mencatat (False)
 SPARK_EVENT_LOG_DIR = f"file://{SPARK_EVENT_DIR}" # hasil log akan disimpan di folder spark-events
 
 SPARK_HISTORY_UI = "http://localhost:18080" # localhost history spark
+
+# PostgreSQL serving layer untuk Apache Superset
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "academic_serving")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "academic")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "change-me")
+POSTGRES_SCHEMA = os.getenv("POSTGRES_SCHEMA", "public")
