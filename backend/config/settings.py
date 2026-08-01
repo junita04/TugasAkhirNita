@@ -35,7 +35,8 @@ MASTER = "local[*]" # memakai seluruh core CPU
 
 SPARK_EVENT_LOG = True # mencatat history (True) kalau tidak mencatat (False)
 
-SPARK_EVENT_LOG_DIR = f"file://{SPARK_EVENT_DIR}" # hasil log akan disimpan di folder spark-events
+SPARK_EVENT_DIR.mkdir(parents=True, exist_ok=True)
+SPARK_EVENT_LOG_DIR = SPARK_EVENT_DIR.as_uri() # hasil log akan disimpan di folder spark-events
 
 SPARK_HISTORY_UI = "http://localhost:18080" # localhost history spark
 
