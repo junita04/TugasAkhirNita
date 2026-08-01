@@ -6,6 +6,8 @@ Pipeline FastAPI ini memproses file Excel melalui Bronze, Silver, Gold, dan Feat
 
 Prasyarat: Docker Desktop dengan Docker Compose aktif.
 
+Pada Windows, pastikan `JAVA_HOME` menunjuk ke JDK dan `SPARK_HOME` menunjuk ke folder Spark yang benar, misalnya `D:\Spark`.
+
 ```powershell
 Copy-Item .env.example .env
 docker compose up -d --build
