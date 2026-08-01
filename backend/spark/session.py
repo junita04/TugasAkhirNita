@@ -55,7 +55,8 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
             "spark.jars.packages",
             ",".join([
                 "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2",
-                "com.crealytics:spark-excel_2.12:3.5.1_0.20.4"
+                "com.crealytics:spark-excel_2.12:3.5.1_0.20.4",
+                "org.postgresql:postgresql:42.7.4"
             ])
         )
 
