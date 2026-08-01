@@ -23,12 +23,14 @@
 
 ## File Map
 
-- Modify `backend/config/settings.py`: normalize Spark mode and derive environment-driven master, catalog, and warehouse defaults while retaining PostgreSQL and S3 settings.
+- Modify `backend/config/settings.py`: normalize Spark mode and derive environment-driven master, catalog, warehouse, and catalog-qualified namespace defaults while retaining PostgreSQL and S3 settings.
 - Modify `backend/spark/session.py`: consume the normalized settings and apply local/cluster driver and Iceberg builder configuration.
+- Modify `backend/bronze/bronze.py`, `backend/silver/silver.py`, `backend/gold/*.py`, `backend/feature_store/*.py`, `backend/ml/*.py`, and `backend/serving/postgres_sink.py`: replace production `local.*` table references with the active catalog namespace so cluster mode reads and writes the Hive/MinIO catalog.
 - Modify `scripts/test_spark_session.py`: replace the manual-only smoke script with unit tests for environment-derived Spark configuration; retain an optional `main()` smoke entry point if useful.
 - Modify `docker/superset/Dockerfile`: install the Trino SQLAlchemy driver alongside `psycopg2-binary`.
+- Create `docker/superset/trino_config.py`: keep the Trino URI and fixed dataset metadata importable inside the Superset image without copying the whole backend package.
 - Modify `docker/superset/register_datasets.py`: create/update the stable Trino database connection and register fixed `gold` datasets idempotently.
-- Modify `scripts/test_superset_config.py`: test Trino URI and fixed dataset metadata without importing Superset runtime modules.
+- Modify `scripts/test_superset_config.py`: test `docker.superset.trino_config` URI and fixed dataset metadata without importing Superset runtime modules.
 - Modify `docker-compose.yml`: pass Trino/catalog environment consistently, keep Superset waiting for healthy Trino, and preserve PostgreSQL metadata dependencies.
 - Modify `.env.example`: document local/cluster Spark values and Trino connection variables without changing development-safe defaults.
 - Modify `README.md`: document the new Iceberg → Trino → Superset flow, compatibility PostgreSQL role, operation commands, and validation commands.
@@ -48,6 +50,7 @@
 - `backend.config.settings.MASTER: str` is the selected Spark master URL.
 - `backend.config.settings.ICEBERG_CATALOG: str` is `local` in local mode and `iceberg` in cluster mode unless explicitly overridden.
 - `backend.config.settings.ICEBERG_WAREHOUSE: str` is the local repository path in local mode and `s3a://warehouse/iceberg` in cluster mode unless explicitly overridden.
+- `backend.config.settings.ICEBERG_NAMESPACE: str` is the active catalog identifier used to qualify Bronze, Silver, Gold, Feature Store, ML, and serving source tables.
 - `backend.spark.session._iceberg_configs(builder)` applies the selected catalog without creating a Spark session.
 
 - [ ] **Step 1: Write failing settings tests**
@@ -184,7 +187,54 @@ python -c "from backend.spark.session import get_spark; print('spark session mod
 
 Expected: focused tests pass and importing the module does not create a Spark session.
 
-- [ ] **Step 8: Commit the Spark configuration unit**
+- [ ] **Step 8: Write a failing catalog-namespace test**
+
+Add a test that verifies production table specifications use the active catalog rather than a literal `local` prefix:
+
+```python
+def test_gold_table_specs_use_active_catalog(monkeypatch):
+    monkeypatch.setattr(postgres_sink, "ICEBERG_NAMESPACE", "iceberg")
+    assert postgres_sink.gold_source_table("gold_mahasiswa") == "iceberg.gold.gold_mahasiswa"
+```
+
+Also add a pure helper assertion for Bronze/Silver table qualification if the module exposes one; do not instantiate Spark.
+
+- [ ] **Step 9: Run the namespace test and verify the expected red state**
+
+Run:
+
+```powershell
+python -m pytest scripts/test_spark_session.py -q
+```
+
+Expected: the new namespace test fails because the current Bronze, Silver, Gold, Feature Store, ML, and PostgreSQL sink code embeds `local` in table names.
+
+- [ ] **Step 10: Replace production hard-coded catalog references**
+
+Export `ICEBERG_NAMESPACE = ICEBERG_CATALOG` from settings. In each production backend module, import the namespace and construct table names with it, for example:
+
+```python
+from backend.config.settings import ICEBERG_NAMESPACE
+
+table = f"{ICEBERG_NAMESPACE}.bronze.{table_name}"
+df.writeTo(f"{ICEBERG_NAMESPACE}.silver.{table_name}")
+tables = spark.sql(f"SHOW TABLES IN {ICEBERG_NAMESPACE}.bronze")
+```
+
+Apply the same pattern to all Gold, Feature Store, and ML table reads/writes. In `backend/serving/postgres_sink.py`, keep fixed target names but derive each fixed source as `f"{ICEBERG_NAMESPACE}.gold.{target_table}"`. Do not change the business table names or PostgreSQL destination schema.
+
+- [ ] **Step 11: Run namespace, import, and focused pipeline tests**
+
+Run:
+
+```powershell
+python -m pytest scripts/test_spark_session.py scripts/test_pipeline_publish.py -q
+python -c "from backend.bronze.bronze import excel_sheet_to_table; from backend.gold.gold import process_gold; print('backend imports ok')"
+```
+
+Expected: all focused tests pass and production modules import without starting Spark.
+
+- [ ] **Step 12: Commit the Spark configuration unit**
 
 ```powershell
 git add backend/config/settings.py backend/spark/session.py scripts/test_spark_session.py

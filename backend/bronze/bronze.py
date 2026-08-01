@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -110,12 +111,12 @@ def load_all_sheets_to_bronze(file_path: Path):
         df.printSchema()
 
         (
-            df.writeTo(f"local.bronze.{table_name}")
+            df.writeTo(f"{ICEBERG_NAMESPACE}.bronze.{table_name}")
             .using("iceberg")
             .createOrReplace()
         )
 
-        logger.info(f"✓ Berhasil -> local.bronze.{table_name}")
+        logger.info(f"✓ Berhasil -> {ICEBERG_NAMESPACE}.bronze.{table_name}")
 
         success_tables.append(table_name)
 
@@ -135,4 +136,4 @@ def load_all_sheets_to_bronze(file_path: Path):
     for sheet in skipped_sheets:
         logger.info(f"- {sheet}")
 
-    logger.info("=" * 60)   
+    logger.info("=" * 60)

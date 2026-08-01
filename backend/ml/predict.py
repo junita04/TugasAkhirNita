@@ -3,6 +3,7 @@ from pyspark.ml.classification import NaiveBayesModel
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -42,7 +43,7 @@ def predict():
     # =====================================================
 
     df = spark.table(
-        "local.feature_store.inference_dataset"
+        f"{ICEBERG_NAMESPACE}.feature_store.inference_dataset"
     )
 
     logger.info(f"Rows Inference Dataset : {df.count()}")

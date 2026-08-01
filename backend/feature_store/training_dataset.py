@@ -1,6 +1,7 @@
 from pyspark.sql.functions import col, upper, trim
 
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -18,7 +19,7 @@ def create_training_dataset():
     # Membaca Gold Mahasiswa
     # =====================================================
 
-    df = spark.table("local.gold.gold_mahasiswa")
+    df = spark.table(f"{ICEBERG_NAMESPACE}.gold.gold_mahasiswa")
 
     logger.info(f"Rows Gold : {df.count()}")
 
@@ -105,7 +106,7 @@ def create_training_dataset():
 
     (
         training_df.writeTo(
-            "local.feature_store.training_dataset"
+            f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
         )
         .using("iceberg")
         .createOrReplace()

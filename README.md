@@ -1,61 +1,121 @@
 # Academic Graduation Prediction System
 
-Pipeline FastAPI ini memproses file Excel melalui Bronze, Silver, Gold, dan Feature Store. Tabel Gold dipublikasikan ke PostgreSQL agar dapat dianalisis melalui Apache Superset.
+Pipeline FastAPI ini memproses file Excel melalui Bronze, Silver, Gold, dan Feature Store menggunakan Apache Spark dan Apache Iceberg.
 
-## Menjalankan Superset
+## Arsitektur
 
-Prasyarat: Docker Desktop dengan Docker Compose aktif.
+```text
+Excel -> FastAPI -> Bronze -> Silver -> Gold Iceberg
+                                |-> Trino (catalog iceberg, schema gold)
+                                `-> Apache Superset
 
-Pada Windows, pastikan `JAVA_HOME` menunjuk ke JDK dan `SPARK_HOME` menunjuk ke folder Spark yang benar, misalnya `D:\Spark`.
+Gold -> PostgreSQL serving snapshot (kompatibilitas pipeline lama)
+Superset metadata -> PostgreSQL database superset
+```
+
+Trino adalah sumber query analitik Superset. Superset tidak membaca tabel PostgreSQL serving. PostgreSQL serving tetap dipertahankan karena pipeline lama masih memanggil `publish_gold_tables()` setelah Gold dan sebelum Feature Store; Iceberg tetap menjadi source of truth.
+
+Dataset Superset yang didaftarkan otomatis:
+
+- `iceberg.gold.gold_mahasiswa`
+- `iceberg.gold.gold_program_studi`
+- `iceberg.gold.gold_kurikulum`
+
+## Prasyarat
+
+- Docker Desktop dengan Docker Compose aktif.
+- Python 3.11 dan dependency pada `requirements.txt`.
+- JDK yang sesuai untuk PySpark saat pipeline dijalankan di host Windows.
+
+Siapkan environment:
 
 ```powershell
 Copy-Item .env.example .env
+```
+
+Jangan commit `.env`; file tersebut berisi credential lokal. Gunakan `.env.example` sebagai template.
+
+## Mode pipeline lokal
+
+Mode lokal adalah default untuk FastAPI yang dijalankan dari host. Spark memakai `local[*]`, catalog Hadoop `local`, dan warehouse filesystem pada folder `iceberg/`.
+
+```powershell
+$env:SPARK_MODE = "local"
+$env:SPARK_MASTER_URL = "local[*]"
+$env:ICEBERG_CATALOG = "local"
+$env:ICEBERG_WAREHOUSE = (Join-Path (Get-Location) "iceberg")
+uvicorn main:app --reload
+```
+
+Upload Excel ke endpoint `POST /upload/`. Pipeline menjalankan:
+
+```text
+Excel -> Bronze -> Silver -> Gold -> PostgreSQL snapshot -> Feature Store
+```
+
+Jalur PostgreSQL tetap aktif untuk kompatibilitas, tetapi bukan sumber dataset Superset.
+
+## Mode cluster Docker
+
+Mode cluster memakai Spark Master Docker, Hive Metastore, dan warehouse Iceberg di MinIO.
+
+```powershell
+$env:SPARK_MODE = "cluster"
+$env:SPARK_MASTER_URL = "spark://spark-master:7077"
+$env:ICEBERG_CATALOG = "iceberg"
+$env:ICEBERG_WAREHOUSE = "s3a://warehouse/iceberg"
 docker compose up -d --build
 docker compose ps
 ```
 
-Buka Superset di <http://localhost:8088>. Username, email, dan password admin berasal dari `.env` (`SUPERSET_ADMIN_USERNAME`, `SUPERSET_ADMIN_EMAIL`, dan `SUPERSET_ADMIN_PASSWORD`).
+Superset menunggu PostgreSQL metadata, Redis, dan Trino sehat. Trino membaca catalog Iceberg melalui Hive Metastore dan MinIO. Buka:
 
-Stack menyediakan PostgreSQL di `localhost:5432`, Redis, Superset web, Superset worker, dan proses inisialisasi. Database serving bernama `academic_serving`; metadata Superset disimpan di database `superset`. Koneksi dan dataset `gold_mahasiswa`, `gold_program_studi`, serta `gold_kurikulum` didaftarkan otomatis.
+- Superset: <http://localhost:8088>
+- Trino: <http://localhost:8082>
+- Spark Master UI: <http://localhost:8080>
+- Spark History UI: <http://localhost:18080>
+- MinIO Console: <http://localhost:9001>
 
-## Menjalankan FastAPI
+Kredensial admin Superset berasal dari `SUPERSET_ADMIN_USERNAME`, `SUPERSET_ADMIN_EMAIL`, dan `SUPERSET_ADMIN_PASSWORD` di `.env`.
 
-Pastikan `.env` sudah ada agar konfigurasi PostgreSQL sama dengan Compose, lalu jalankan:
+## Validasi
+
+Validasi sintaks Compose tanpa menjalankan container:
 
 ```powershell
-uvicorn main:app --reload
+docker compose config
 ```
 
-Upload Excel ke endpoint `POST /upload/`. Pipeline akan menjalankan:
+Jalankan test konfigurasi dan integrasi pipeline:
 
-```text
-Excel -> Bronze -> Silver -> Gold (Iceberg) -> PostgreSQL -> Superset
-                                      \-> Feature Store
+```powershell
+python -m unittest scripts.test_spark_session scripts.test_superset_config scripts.test_compose_architecture scripts.test_pipeline_publish -v
 ```
 
-Setiap upload yang berhasil akan mengganti snapshot tiga tabel serving PostgreSQL. Iceberg tetap menjadi sumber data utama pipeline.
+Smoke test pembuatan SparkSession lokal, jika dependency Spark dan Java sudah tersedia:
+
+```powershell
+$env:RUN_SPARK_SMOKE = "1"
+python scripts/test_spark_session.py
+```
 
 ## Operasional
 
 ```powershell
-# Lihat status dan log
+# Status dan log bootstrap Superset
 docker compose ps
 docker compose logs -f superset-init
 
-# Restart UI/worker
+# Restart query UI dan worker
 docker compose restart superset superset-worker
 
-# Hentikan service tetapi pertahankan volume database
+# Hentikan service, pertahankan volume
 docker compose down
 
-# Hentikan service dan hapus data metadata/serving
+# Hapus volume database dan data lake; gunakan hanya jika reset total memang diinginkan
 docker compose down -v
 ```
 
-Jangan menjalankan `docker compose down -v` jika data PostgreSQL masih diperlukan. Jangan commit `.env`; gunakan `.env.example` sebagai template.
+Jika koneksi Trino atau dataset belum muncul, periksa `docker compose logs trino` dan `docker compose logs superset-init`. Bootstrap idempotent dan akan mempertahankan dataset yang sudah ada berdasarkan database, schema, dan nama tabel.
 
-## Troubleshooting
-
-- Jika FastAPI tidak bisa tersambung, pastikan PostgreSQL container sehat dan `POSTGRES_HOST=localhost`, `POSTGRES_PORT=5432` saat FastAPI berjalan di host.
-- Jika Superset belum tersedia, periksa `docker compose logs superset-init`; inisialisasi harus selesai sebelum service web dan worker berjalan.
-- Jika password diubah setelah volume PostgreSQL dibuat, gunakan kredensial lama atau reset volume secara sadar dengan `docker compose down -v`.
+Jika FastAPI berjalan di host, gunakan `POSTGRES_HOST=localhost` dan `POSTGRES_PORT=5432`. Jika nilai credential PostgreSQL diubah setelah volume dibuat, gunakan credential lama atau reset volume secara sadar.

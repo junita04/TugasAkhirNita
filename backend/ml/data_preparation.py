@@ -2,6 +2,7 @@ from pyspark.ml import Pipeline
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -20,7 +21,7 @@ def prepare_training_dataset():
     # =====================================================
 
     df = spark.table(
-        "local.feature_store.training_dataset"
+        f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
     )
 
     logger.info(f"Rows Training Dataset : {df.count()}")

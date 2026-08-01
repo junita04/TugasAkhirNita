@@ -27,18 +27,52 @@ SPARK_EVENT_DIR = PROJECT_ROOT / "spark-events"
 SCRIPT_DIR = PROJECT_ROOT / "scripts"
 STATIC_DIR = PROJECT_ROOT / "static"
 
-# bagian spark 
+# bagian spark
 
 APP_NAME = "Prediksi Kelulusan Mahasiswa" # nama spark application
 
-MASTER = "local[*]" # memakai seluruh core CPU
 
-SPARK_EVENT_LOG = True # mencatat history (True) kalau tidak mencatat (False)
+def _spark_mode() -> str:
+    value = os.getenv("SPARK_MODE", "local").strip().lower()
+    if value not in {"local", "cluster"}:
+        raise ValueError("SPARK_MODE must be either 'local' or 'cluster'")
+    return value
+
+
+SPARK_MODE = _spark_mode()
+MASTER = os.getenv(
+    "SPARK_MASTER_URL",
+    "local[*]" if SPARK_MODE == "local" else "spark://spark-master:7077",
+)
+
+SPARK_EVENT_LOG = os.getenv("SPARK_EVENT_LOG", "true").lower() == "true" # mencatat history
 
 SPARK_EVENT_DIR.mkdir(parents=True, exist_ok=True)
 SPARK_EVENT_LOG_DIR = SPARK_EVENT_DIR.as_uri() # hasil log akan disimpan di folder spark-events
 
-SPARK_HISTORY_UI = "http://localhost:18080" # localhost history spark
+SPARK_HISTORY_UI = os.getenv("SPARK_HISTORY_UI", "http://localhost:18080") # localhost history spark
+
+# Iceberg catalog
+# 'local'   -> warehouse folder filesystem (iceberg/)
+# 'iceberg' -> Hive Metastore + warehouse di MinIO (s3a://warehouse/iceberg)
+ICEBERG_CATALOG = os.getenv(
+    "ICEBERG_CATALOG",
+    "local" if SPARK_MODE == "local" else "iceberg",
+)
+ICEBERG_NAMESPACE = ICEBERG_CATALOG
+ICEBERG_WAREHOUSE = os.getenv(
+    "ICEBERG_WAREHOUSE",
+    str(ICEBERG_DIR) if SPARK_MODE == "local" else "s3a://warehouse/iceberg",
+)
+
+# MinIO (S3) credential untuk mode cluster
+S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
+S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minioadmin-password")
+S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://minio:9000")
+S3_PATH_STYLE_ACCESS = os.getenv("S3_PATH_STYLE_ACCESS", "true").lower() == "true"
+
+# Hive Metastore
+HIVE_METASTORE_URI = os.getenv("HIVE_METASTORE_URI", "thrift://hive-metastore:9083")
 
 # PostgreSQL serving layer untuk Apache Superset
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")

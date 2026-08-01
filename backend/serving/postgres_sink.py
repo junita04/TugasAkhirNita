@@ -1,9 +1,15 @@
-"""Publish Gold Iceberg tables to PostgreSQL for analytics consumers."""
-
-from dataclasses import dataclass
 import os
-import re
-from typing import Any
+from dataclasses import dataclass
+
+from backend.config.settings import (
+    ICEBERG_NAMESPACE,
+    POSTGRES_DB,
+    POSTGRES_HOST,
+    POSTGRES_PASSWORD,
+    POSTGRES_PORT,
+    POSTGRES_SCHEMA,
+    POSTGRES_USER,
+)
 
 
 @dataclass(frozen=True)
@@ -13,61 +19,59 @@ class GoldTableSpec:
 
 
 GOLD_TABLES = (
-    GoldTableSpec("local.gold.gold_mahasiswa", "gold_mahasiswa"),
-    GoldTableSpec("local.gold.gold_program_studi", "gold_program_studi"),
-    GoldTableSpec("local.gold.gold_kurikulum", "gold_kurikulum"),
+    GoldTableSpec(
+        f"{ICEBERG_NAMESPACE}.gold.gold_mahasiswa",
+        "gold_mahasiswa",
+    ),
+    GoldTableSpec(
+        f"{ICEBERG_NAMESPACE}.gold.gold_program_studi",
+        "gold_program_studi",
+    ),
+    GoldTableSpec(
+        f"{ICEBERG_NAMESPACE}.gold.gold_kurikulum",
+        "gold_kurikulum",
+    ),
 )
 
-_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-
-def _required_env(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        raise RuntimeError(f"Environment variable {name} wajib diisi")
-    return value
-
-
-def postgres_schema() -> str:
-    schema = os.getenv("POSTGRES_SCHEMA", "public")
-    if not _IDENTIFIER.fullmatch(schema):
-        raise RuntimeError("POSTGRES_SCHEMA hanya boleh berisi identifier PostgreSQL yang valid")
-    return schema
+def gold_source_table(target_table: str) -> str:
+    allowed_tables = {spec.target_table for spec in GOLD_TABLES}
+    if target_table not in allowed_tables:
+        raise ValueError(f"Unsupported Gold table: {target_table}")
+    return f"{ICEBERG_NAMESPACE}.gold.{target_table}"
 
 
 def postgres_jdbc_url() -> str:
-    host = _required_env("POSTGRES_HOST")
-    port = _required_env("POSTGRES_PORT")
-    database = _required_env("POSTGRES_DB")
+    host = os.getenv("POSTGRES_HOST", POSTGRES_HOST)
+    port = os.getenv("POSTGRES_PORT", POSTGRES_PORT)
+    database = os.getenv("POSTGRES_DB", POSTGRES_DB)
     return f"jdbc:postgresql://{host}:{port}/{database}"
 
 
 def postgres_properties() -> dict[str, str]:
     return {
-        "user": _required_env("POSTGRES_USER"),
-        "password": _required_env("POSTGRES_PASSWORD"),
+        "user": os.getenv("POSTGRES_USER", POSTGRES_USER),
+        "password": os.getenv("POSTGRES_PASSWORD", POSTGRES_PASSWORD),
         "driver": "org.postgresql.Driver",
     }
 
 
-def publish_gold_tables(spark: Any) -> None:
-    """Write the fixed Gold tables to PostgreSQL as the latest serving snapshot."""
-
+def publish_gold_tables(spark) -> None:
+    schema = os.getenv("POSTGRES_SCHEMA", POSTGRES_SCHEMA)
     url = postgres_jdbc_url()
     properties = postgres_properties()
-    schema = postgres_schema()
 
-    for table in GOLD_TABLES:
-        target = f"{schema}.{table.target_table}"
+    for spec in GOLD_TABLES:
+        target_table = spec.target_table
         try:
-            dataframe = spark.table(table.source_table)
+            dataframe = spark.table(gold_source_table(target_table))
             dataframe.write.jdbc(
                 url=url,
-                table=target,
+                table=f"{schema}.{target_table}",
                 mode="overwrite",
                 properties=properties,
             )
         except Exception as exc:
             raise RuntimeError(
-                f"Gagal publish {table.source_table} ke PostgreSQL table {target}"
+                f"Failed to publish Gold table {target_table} to PostgreSQL"
             ) from exc

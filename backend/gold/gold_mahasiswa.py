@@ -10,6 +10,7 @@ from pyspark.sql.functions import (
 )
 
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +28,7 @@ def process_gold_mahasiswa():
     # Membaca Silver Layer
     # =====================================================
 
-    df = spark.table("local.silver.data_referensi_mahasiswa")
+    df = spark.table(f"{ICEBERG_NAMESPACE}.silver.data_referensi_mahasiswa")
 
     logger.info(f"Rows Silver : {df.count()}")
 
@@ -50,7 +51,7 @@ def process_gold_mahasiswa():
     # Ambil Total SKS Kurikulum
     # =====================================================
 
-    kurikulum = spark.table("local.silver.data_kurikulum")
+    kurikulum = spark.table(f"{ICEBERG_NAMESPACE}.silver.data_kurikulum")
 
     jumlah_sks_kurikulum = (
         kurikulum
@@ -177,7 +178,7 @@ def process_gold_mahasiswa():
     # =====================================================
 
     (
-        df.writeTo("local.gold.gold_mahasiswa")
+        df.writeTo(f"{ICEBERG_NAMESPACE}.gold.gold_mahasiswa")
         .using("iceberg")
         .createOrReplace()
     )

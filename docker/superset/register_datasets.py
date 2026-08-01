@@ -1,47 +1,49 @@
-import os
-from urllib.parse import quote_plus
-
-from superset.app import create_app
-from superset.connectors.sqla.models import SqlaTable
-from superset.extensions import db
-from superset.models.core import Database
+from trino_config import (
+    TRINO_DATABASE_NAME,
+    dataset_specs,
+    trino_uri,
+)
 
 
-TABLES = ("gold_mahasiswa", "gold_program_studi", "gold_kurikulum")
+def register_datasets() -> None:
+    from superset.app import create_app
+    from superset.connectors.sqla.models import SqlaTable
+    from superset.extensions import db
+    from superset.models.core import Database
 
-
-def serving_uri():
-    user = quote_plus(os.environ["POSTGRES_USER"])
-    password = quote_plus(os.environ["POSTGRES_PASSWORD"])
-    database = os.environ["POSTGRES_DB"]
-    return f"postgresql+psycopg2://{user}:{password}@postgres:5432/{database}"
-
-
-app = create_app()
-with app.app_context():
-    database = db.session.query(Database).filter_by(
-        database_name="Academic Serving"
-    ).one_or_none()
-    if database is None:
-        database = Database(
-            database_name="Academic Serving",
-            sqlalchemy_uri=serving_uri(),
-            expose_in_sqllab=True,
-        )
-        db.session.add(database)
-        db.session.flush()
-
-    for table_name in TABLES:
-        dataset = db.session.query(SqlaTable).filter_by(
-            database_id=database.id,
-            table_name=table_name,
-            schema="public",
+    app = create_app()
+    with app.app_context():
+        database = db.session.query(Database).filter_by(
+            database_name=TRINO_DATABASE_NAME,
         ).one_or_none()
-        if dataset is None:
-            db.session.add(SqlaTable(
-                database=database,
-                table_name=table_name,
-                schema="public",
-            ))
+        if database is None:
+            database = Database(
+                database_name=TRINO_DATABASE_NAME,
+                sqlalchemy_uri=trino_uri(),
+                expose_in_sqllab=True,
+            )
+            db.session.add(database)
+            db.session.flush()
+        elif database.sqlalchemy_uri != trino_uri():
+            database.sqlalchemy_uri = trino_uri()
 
-    db.session.commit()
+        for schema, table_name in dataset_specs():
+            dataset = db.session.query(SqlaTable).filter_by(
+                database_id=database.id,
+                table_name=table_name,
+                schema=schema,
+            ).one_or_none()
+            if dataset is None:
+                db.session.add(
+                    SqlaTable(
+                        database=database,
+                        table_name=table_name,
+                        schema=schema,
+                    )
+                )
+
+        db.session.commit()
+
+
+if __name__ == "__main__":
+    register_datasets()

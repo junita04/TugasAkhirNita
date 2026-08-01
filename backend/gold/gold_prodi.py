@@ -1,4 +1,5 @@
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -15,7 +16,7 @@ def process_gold_program_studi():
     # Membaca Silver Layer
     # ===============================
 
-    df = spark.table("local.silver.data_program_studi")
+    df = spark.table(f"{ICEBERG_NAMESPACE}.silver.data_program_studi")
 
     logger.info(f"Jumlah Data : {df.count()}")
 
@@ -24,7 +25,7 @@ def process_gold_program_studi():
     # ===============================
 
     (
-        df.writeTo("local.gold.gold_program_studi")
+        df.writeTo(f"{ICEBERG_NAMESPACE}.gold.gold_program_studi")
         .using("iceberg")
         .createOrReplace()
     )

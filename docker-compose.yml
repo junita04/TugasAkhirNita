@@ -1,4 +1,13 @@
+name: academic-datalakehouse
+
+networks:
+  lakehouse:
+    driver: bridge
+
 services:
+  # ============================================================
+  # 1. Postgres Serving (FastAPI lokal + metadata Superset)
+  # ============================================================
   postgres:
     image: postgres:16-alpine
     environment:
@@ -10,20 +19,261 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-superset.sql:ro
+    networks: [lakehouse]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
 
+  # ============================================================
+  # 2. Redis (cache Superset)
+  # ============================================================
   redis:
     image: redis:7-alpine
+    networks: [lakehouse]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 20
 
+  # ============================================================
+  # 3. MinIO (Object Storage / Data Lake)
+  # ============================================================
+  minio:
+    image: minio/minio:RELEASE.2024-05-10T01-41-38Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin-password}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks: [lakehouse]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    build:
+      context: ./docker/minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin-password}
+      MINIO_BUCKET_WAREHOUSE: ${MINIO_BUCKET_WAREHOUSE:-warehouse}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw}
+      MINIO_BUCKET_MODELS: ${MINIO_BUCKET_MODELS:-models}
+      MINIO_BUCKET_LOGS: ${MINIO_BUCKET_LOGS:-logs}
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    networks: [lakehouse]
+
+  # ============================================================
+  # 4. Postgres Hive Metastore (metadata Iceberg)
+  # ============================================================
+  postgres-hive:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_HIVE_DB:-metastore}
+      POSTGRES_USER: ${POSTGRES_HIVE_USER:-hive}
+      POSTGRES_PASSWORD: ${POSTGRES_HIVE_PASSWORD:-hive-password}
+    ports:
+      - "${POSTGRES_HIVE_PORT:-5433}:5432"
+    volumes:
+      - postgres-hive-data:/var/lib/postgresql/data
+    networks: [lakehouse]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ============================================================
+  # 5. Hive Metastore
+  # ============================================================
+  hive-metastore:
+    build:
+      context: ./docker/hive-metastore
+    depends_on:
+      postgres-hive:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "9083:9083"
+    networks: [lakehouse]
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9083 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  # ============================================================
+  # 6. Spark Master / Worker / History
+  # ============================================================
+  spark-master:
+    build:
+      context: ./docker/spark
+    command: /opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - spark-logs:/opt/bitnami/spark/logs
+    networks: [lakehouse]
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+
+  spark-worker:
+    build:
+      context: ./docker/spark
+    command: /opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+    ports:
+      - "8081:8081"
+    volumes:
+      - spark-logs:/opt/bitnami/spark/logs
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    networks: [lakehouse]
+
+  spark-history:
+    build:
+      context: ./docker/spark
+    command: /opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer
+    environment:
+      SPARK_HISTORY_OPTS: "-Dspark.history.fs.logDirectory=file:/opt/bitnami/spark/logs"
+    ports:
+      - "18080:18080"
+    volumes:
+      - spark-logs:/opt/bitnami/spark/logs
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    networks: [lakehouse]
+
+  # ============================================================
+  # 7. Trino (SQL Engine -> Superset)
+  # ============================================================
+  trino:
+    image: trinodb/trino:462
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./docker/trino/config.properties:/etc/trino/config.properties:ro
+      - ./docker/trino/node.properties:/etc/trino/node.properties:ro
+      - ./docker/trino/jvm.config:/etc/trino/jvm.config:ro
+      - ./docker/trino/catalog:/etc/trino/catalog:ro
+    depends_on:
+      hive-metastore:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks: [lakehouse]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8082/v1/info || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  # ============================================================
+  # 8. Postgres Airflow (metadata Airflow)
+  # ============================================================
+  postgres-airflow:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_AIRFLOW_DB:-airflow}
+      POSTGRES_USER: ${POSTGRES_AIRFLOW_USER:-airflow}
+      POSTGRES_PASSWORD: ${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}
+    ports:
+      - "${POSTGRES_AIRFLOW_PORT:-5434}:5432"
+    volumes:
+      - postgres-airflow-data:/var/lib/postgresql/data
+    networks: [lakehouse]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ============================================================
+  # 9. Airflow (init, scheduler, webserver)
+  # ============================================================
+  airflow-init:
+    build:
+      context: ./docker/airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER:-airflow}:${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}@postgres-airflow:5432/${POSTGRES_AIRFLOW_DB:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ""
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
+      _AIRFLOW_DB_UPGRADE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin-local-password}
+      _AIRFLOW_WWW_USER_ROLE: Admin
+    command: version
+    depends_on:
+      postgres-airflow:
+        condition: service_healthy
+    restart: "no"
+    networks: [lakehouse]
+
+  airflow-scheduler:
+    build:
+      context: ./docker/airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER:-airflow}:${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}@postgres-airflow:5432/${POSTGRES_AIRFLOW_DB:-airflow}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
+    command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    networks: [lakehouse]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8793/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+
+  airflow-webserver:
+    build:
+      context: ./docker/airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER:-airflow}:${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}@postgres-airflow:5432/${POSTGRES_AIRFLOW_DB:-airflow}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
+    ports:
+      - "${AIRFLOW_WEBSERVER_PORT:-8085}:8080"
+    command: webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    networks: [lakehouse]
+
+  # ============================================================
+  # 10. Superset (via Trino)
+  # ============================================================
   superset-init:
     build:
       context: ./docker/superset
@@ -31,13 +281,20 @@ services:
     environment:
       SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
       REDIS_HOST: redis
+      TRINO_HOST: ${TRINO_HOST:-trino}
+      TRINO_PORT: ${TRINO_PORT:-8082}
+      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg}
+      TRINO_USER: ${TRINO_USER:-trino}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      trino:
+        condition: service_healthy
     command: ["/app/docker/entrypoint-init.sh"]
     restart: "no"
+    networks: [lakehouse]
 
   superset:
     build:
@@ -46,12 +303,17 @@ services:
     environment:
       SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
       REDIS_HOST: redis
+      TRINO_HOST: ${TRINO_HOST:-trino}
+      TRINO_PORT: ${TRINO_PORT:-8082}
+      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg}
+      TRINO_USER: ${TRINO_USER:-trino}
     depends_on:
       superset-init:
         condition: service_completed_successfully
     ports:
       - "8088:8088"
     command: ["/bin/sh", "-c", "gunicorn --bind 0.0.0.0:8088 --workers 2 --timeout 120 'superset.app:create_app()'"]
+    networks: [lakehouse]
 
   superset-worker:
     build:
@@ -60,10 +322,19 @@ services:
     environment:
       SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
       REDIS_HOST: redis
+      TRINO_HOST: ${TRINO_HOST:-trino}
+      TRINO_PORT: ${TRINO_PORT:-8082}
+      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg}
+      TRINO_USER: ${TRINO_USER:-trino}
     depends_on:
       superset-init:
         condition: service_completed_successfully
     command: ["celery", "--app=superset.tasks.celery_app:app", "worker", "--pool=prefork", "-O", "fair", "-c", "2"]
+    networks: [lakehouse]
 
 volumes:
   postgres-data:
+  postgres-hive-data:
+  postgres-airflow-data:
+  minio-data:
+  spark-logs:

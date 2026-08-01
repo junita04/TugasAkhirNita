@@ -3,6 +3,7 @@ import re
 from pyspark.sql.functions import col, trim
 
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -35,7 +36,7 @@ def process_table(table_name: str):
     # Membaca Bronze Layer
     # =====================================================
 
-    df = spark.table(f"local.bronze.{table_name}")
+    df = spark.table(f"{ICEBERG_NAMESPACE}.bronze.{table_name}")
 
     logger.info(f"Rows Awal : {df.count()}")
 
@@ -92,7 +93,7 @@ def process_table(table_name: str):
     # =====================================================
 
     (
-        df.writeTo(f"local.silver.{table_name}")
+        df.writeTo(f"{ICEBERG_NAMESPACE}.silver.{table_name}")
         .using("iceberg")
         .createOrReplace()
     )
@@ -106,7 +107,7 @@ def process_all_tables():
 
     spark = get_spark("Silver Layer")
 
-    tables = spark.sql("SHOW TABLES IN local.bronze")
+    tables = spark.sql(f"SHOW TABLES IN {ICEBERG_NAMESPACE}.bronze")
 
     total = 0
 
