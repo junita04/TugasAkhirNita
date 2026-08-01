@@ -3,6 +3,20 @@ import os
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2] # mencari folder utama
 
+
+def _load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        os.environ.setdefault(name.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env_file(PROJECT_ROOT / ".env")
+
 # membuat sederhana folder (directory)
 
 DATA_DIR = PROJECT_ROOT / "data"
