@@ -4,6 +4,8 @@ from backend.bronze.bronze import load_all_sheets_to_bronze
 from backend.silver.silver import process_all_tables
 from backend.gold.gold import process_gold
 from backend.feature_store.feature_store import run_feature_store
+from backend.serving.postgres_sink import publish_gold_tables
+from backend.spark.session import get_spark
 
 from backend.utils.logger import get_logger
 
@@ -28,6 +30,9 @@ def run_pipeline(file_path: Path):
 
     # Gold
     process_gold()
+
+    # PostgreSQL serving layer untuk Apache Superset
+    publish_gold_tables(get_spark("Gold PostgreSQL Publish"))
 
     # Feature Store
     run_feature_store()
