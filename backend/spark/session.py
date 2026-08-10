@@ -1,3 +1,5 @@
+import os
+
 from pyspark.sql import SparkSession
 
 from backend.config.settings import (
@@ -7,6 +9,7 @@ from backend.config.settings import (
     SPARK_EVENT_LOG_DIR,
     SPARK_MODE,
     ICEBERG_CATALOG,
+    ICEBERG_NAMESPACE,
     ICEBERG_WAREHOUSE,
     S3_ACCESS_KEY,
     S3_SECRET_KEY,
@@ -14,6 +17,9 @@ from backend.config.settings import (
     S3_PATH_STYLE_ACCESS,
     HIVE_METASTORE_URI,
 )
+
+
+SPARK_LOCAL_DIR = os.getenv("SPARK_LOCAL_DIRS", "spark-tmp")
 
 
 def _iceberg_configs(spark_builder):
@@ -46,6 +52,9 @@ def _iceberg_configs(spark_builder):
             .config("spark.hadoop.fs.s3a.secret.key", S3_SECRET_KEY)
             .config("spark.hadoop.fs.s3a.path.style.access", str(S3_PATH_STYLE_ACCESS).lower())
             .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+            .config("spark.hadoop.fs.s3a.fast.upload", "true")
+            .config("spark.hadoop.fs.s3a.fast.upload.buffer", "bytebuffer")
+            .config("spark.hadoop.fs.s3a.buffer.dir", SPARK_LOCAL_DIR)
         )
 
     return (
@@ -91,6 +100,7 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
         .config("spark.driver.memory", "4g")
         .config("spark.executor.memory", "4g")
         .config("spark.driver.maxResultSize", "2g")
+        .config("spark.local.dir", SPARK_LOCAL_DIR)
 
         # =====================================================
         # Performance
@@ -107,7 +117,9 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
             ",".join([
                 "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2",
                 "com.crealytics:spark-excel_2.12:3.5.1_0.20.4",
-                "org.postgresql:postgresql:42.7.4"
+                "org.postgresql:postgresql:42.7.4",
+                "org.apache.hadoop:hadoop-aws:3.3.4",
+                "com.amazonaws:aws-java-sdk-bundle:1.12.261",
             ])
         )
 
@@ -146,6 +158,13 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
     spark = builder.getOrCreate()
 
     spark.sparkContext.setLogLevel("WARN")
+
+    # HiveCatalog does not create namespaces implicitly. Create every
+    # namespace used by the Bronze/Silver/Gold and feature-store stages.
+    for namespace in ("bronze", "silver", "gold", "feature_store"):
+        spark.sql(
+            f"CREATE NAMESPACE IF NOT EXISTS {ICEBERG_NAMESPACE}.{namespace}"
+        )
 
     print("=" * 60)
     print(f"Spark App Name : {spark.sparkContext.appName}")

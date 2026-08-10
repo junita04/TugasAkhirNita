@@ -1,0 +1,6 @@
+-- ============================================================
+-- Inisialisasi database Hive Metastore (postgres-hive)
+-- ============================================================
+-- User 'hive' adalah superuser database metastore.
+-- Skema Hive (tabel TABLES, SDS, dll.) dibuat otomatis oleh
+-- Hive Metastore saat pertama kali dijalankan.

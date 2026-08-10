@@ -52,4 +52,38 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
 
+@router.post("/file")
+async def upload_file_only(file: UploadFile = File(...)):
+    """
+    Menyimpan file Excel ke folder data/ tanpa menjalankan pipeline.
+    Digunakan oleh halaman Upload sebelum tombol "Jalankan Pipeline".
+    """
+
+    try:
+
+        if not file.filename.endswith((".xlsx", ".xls")):
+            raise HTTPException(
+                status_code=400,
+                detail="File harus berupa Excel (.xlsx atau .xls)"
+            )
+
+        file_path = UPLOAD_DIR / file.filename
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        return {
+            "status": "success",
+            "message": "File berhasil diunggah.",
+            "file": file.filename
+        }
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+
 # uvicorn main:app --reload

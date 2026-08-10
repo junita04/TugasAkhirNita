@@ -35,15 +35,18 @@ Copy-Item .env.example .env
 
 Jangan commit `.env`; file tersebut berisi credential lokal. Gunakan `.env.example` sebagai template.
 
-## Mode pipeline lokal
+## Mode ringan: Spark lokal + service lakehouse Docker
 
-Mode lokal adalah default untuk FastAPI yang dijalankan dari host. Spark memakai `local[*]`, catalog Hadoop `local`, dan warehouse filesystem pada folder `iceberg/`.
+Mode yang direkomendasikan untuk laptop terbatas menjalankan FastAPI dan Spark di Windows. MinIO, Hive Metastore, Trino, Airflow, Superset, PostgreSQL, dan Redis tetap berjalan di Docker. Spark lokal menulis ke warehouse Iceberg di MinIO melalui Hive Metastore.
 
 ```powershell
 $env:SPARK_MODE = "local"
 $env:SPARK_MASTER_URL = "local[*]"
-$env:ICEBERG_CATALOG = "local"
-$env:ICEBERG_WAREHOUSE = (Join-Path (Get-Location) "iceberg")
+$env:ICEBERG_CATALOG = "iceberg"
+$env:ICEBERG_WAREHOUSE = "s3a://warehouse/iceberg"
+$env:S3_ENDPOINT = "http://localhost:9000"
+$env:HIVE_METASTORE_URI = "thrift://localhost:9083"
+$env:SPARK_LOCAL_DIRS = (Join-Path (Get-Location) "spark-tmp")
 uvicorn main:app --reload
 ```
 
@@ -55,16 +58,16 @@ Excel -> Bronze -> Silver -> Gold -> PostgreSQL snapshot -> Feature Store
 
 Jalur PostgreSQL tetap aktif untuk kompatibilitas, tetapi bukan sumber dataset Superset.
 
-## Mode cluster Docker
+## Mode cluster Docker (opsional)
 
-Mode cluster memakai Spark Master Docker, Hive Metastore, dan warehouse Iceberg di MinIO.
+Mode cluster tetap tersedia untuk demonstrasi, tetapi Spark Docker tidak dijalankan oleh stack default. Aktifkan profile `spark-docker` hanya jika diperlukan.
 
 ```powershell
 $env:SPARK_MODE = "cluster"
 $env:SPARK_MASTER_URL = "spark://spark-master:7077"
 $env:ICEBERG_CATALOG = "iceberg"
 $env:ICEBERG_WAREHOUSE = "s3a://warehouse/iceberg"
-docker compose up -d --build
+docker compose --profile spark-docker up -d --build
 docker compose ps
 ```
 
@@ -75,6 +78,8 @@ Superset menunggu PostgreSQL metadata, Redis, dan Trino sehat. Trino membaca cat
 - Spark Master UI: <http://localhost:8080>
 - Spark History UI: <http://localhost:18080>
 - MinIO Console: <http://localhost:9001>
+
+Airflow Docker memanggil pipeline Spark lokal melalui `http://host.docker.internal:8000/pipeline/run`. Karena itu FastAPI harus aktif di Windows agar DAG Airflow dapat menjalankan pipeline.
 
 Kredensial admin Superset berasal dari `SUPERSET_ADMIN_USERNAME`, `SUPERSET_ADMIN_EMAIL`, dan `SUPERSET_ADMIN_PASSWORD` di `.env`.
 

@@ -9,3 +9,6 @@ spark-events/
 spark-3.5.2-bin-hadoop3.tgz
 .env
 .worktrees/
+spark-tmp/
+DockerDesktopData/
+_recovery_cleanup/
