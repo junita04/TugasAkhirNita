@@ -1,4 +1,5 @@
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 from pyspark.sql.functions import col
 
 spark = get_spark("Check Gold")
@@ -7,7 +8,7 @@ spark = get_spark("Check Gold")
 # Membaca Gold Mahasiswa
 # ==========================================
 
-df = spark.table("local.gold.gold_mahasiswa")
+df = spark.table(f"{ICEBERG_NAMESPACE}.gold.gold_mahasiswa")
 
 print("=" * 60)
 print("RINGKASAN GOLD MAHASISWA")

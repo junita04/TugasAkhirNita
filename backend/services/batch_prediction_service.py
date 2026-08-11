@@ -15,11 +15,12 @@ from pathlib import Path
 import pandas as pd
 
 from backend.spark.session import get_spark
+from backend.config.settings import DATA_DIR, MODEL_DIR
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-UPLOAD_DIR = Path("data")
+UPLOAD_DIR = DATA_DIR
 
 # Nama sheet pada file Excel template
 MAHASISWA_SHEET = "Data Referensi Mahasiswa"
@@ -40,7 +41,7 @@ KURIKULUM_COLUMNS = {
     "Jumlah SKS Total": "jumlah_sks_total",
 }
 
-MODEL_PATH = Path("models") / "gaussian_nb"
+MODEL_PATH = MODEL_DIR / "gaussian_nb"
 
 
 def _model_exists() -> bool:

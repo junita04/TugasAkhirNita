@@ -6,8 +6,6 @@ tanpa mengubah modul inti. Jika model belum tersedia, mengembalikan estimasi
 sementara dengan fallback heuristik (tidak melatih ulang).
 """
 
-from pathlib import Path
-
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.sql.types import (
     DoubleType,
@@ -18,12 +16,12 @@ from pyspark.sql.types import (
 )
 
 from backend.spark.session import get_spark
-from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.settings import ICEBERG_NAMESPACE, MODEL_DIR
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-MODEL_PATH = Path("models") / "gaussian_nb"
+MODEL_PATH = MODEL_DIR / "gaussian_nb"
 
 FEATURE_COLUMNS = [
     "estimasi_semester",

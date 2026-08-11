@@ -1,8 +1,8 @@
-from pathlib import Path
 import shutil
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
+from backend.config.settings import DATA_DIR
 from backend.services.pipeline_service import run_pipeline
 
 router = APIRouter(
@@ -10,7 +10,7 @@ router = APIRouter(
     tags=["Upload"]
 )
 
-UPLOAD_DIR = Path("data")
+UPLOAD_DIR = DATA_DIR
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 

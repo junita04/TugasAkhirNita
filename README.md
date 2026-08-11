@@ -35,20 +35,23 @@ Copy-Item .env.example .env
 
 Jangan commit `.env`; file tersebut berisi credential lokal. Gunakan `.env.example` sebagai template.
 
-## Mode ringan: Spark lokal + service lakehouse Docker
+> **Keputusan arsitektur final:** Spark dijalankan **sepenuhnya di dalam Docker** (profile `spark-docker`). Spark tidak dijalankan langsung di host Windows; mode `local` tidak digunakan untuk kebutuhan riset. Semua layanan disediakan Docker (`docker-compose.yml`).
 
-Mode yang direkomendasikan untuk laptop terbatas menjalankan FastAPI dan Spark di Windows. MinIO, Hive Metastore, Trino, Airflow, Superset, PostgreSQL, dan Redis tetap berjalan di Docker. Spark lokal menulis ke warehouse Iceberg di MinIO melalui Hive Metastore.
+## Mode utama: pipeline dengan Spark Docker + service lakehouse
+
+Jalankan service lakehouse termasuk Spark:
 
 ```powershell
-$env:SPARK_MODE = "local"
-$env:SPARK_MASTER_URL = "local[*]"
+$env:SPARK_MODE = "cluster"
+$env:SPARK_MASTER_URL = "spark://spark-master:7077"
 $env:ICEBERG_CATALOG = "iceberg"
 $env:ICEBERG_WAREHOUSE = "s3a://warehouse/iceberg"
-$env:S3_ENDPOINT = "http://localhost:9000"
-$env:HIVE_METASTORE_URI = "thrift://localhost:9083"
-$env:SPARK_LOCAL_DIRS = (Join-Path (Get-Location) "spark-tmp")
-uvicorn main:app --reload
+$env:S3_ENDPOINT = "http://minio:9000"
+$env:HIVE_METASTORE_URI = "thrift://hive-metastore:9083"
+docker compose --profile spark-docker up -d --build
 ```
+
+Nilai di atas sudah menjadi default `.env.example` (service name, bukan `localhost`) — konsisten untuk semua client di dalam network Docker `lakehouse`.
 
 Upload Excel ke endpoint `POST /upload/`. Pipeline menjalankan:
 
@@ -58,17 +61,12 @@ Excel -> Bronze -> Silver -> Gold -> PostgreSQL snapshot -> Feature Store
 
 Jalur PostgreSQL tetap aktif untuk kompatibilitas, tetapi bukan sumber dataset Superset.
 
-## Mode cluster Docker (opsional)
+## Mode cluster Docker (opsional) — sudah termasuk pada mode utama
 
-Mode cluster tetap tersedia untuk demonstrasi, tetapi Spark Docker tidak dijalankan oleh stack default. Aktifkan profile `spark-docker` hanya jika diperlukan.
+Mode cluster adalah mode utama (lihat bagian sebelumnya). Bagian ini mencatat command verifikasi dan service yang terbuka ketika `spark-docker` aktif:
 
 ```powershell
-$env:SPARK_MODE = "cluster"
-$env:SPARK_MASTER_URL = "spark://spark-master:7077"
-$env:ICEBERG_CATALOG = "iceberg"
-$env:ICEBERG_WAREHOUSE = "s3a://warehouse/iceberg"
-docker compose --profile spark-docker up -d --build
-docker compose ps
+docker compose --profile spark-docker ps
 ```
 
 Superset menunggu PostgreSQL metadata, Redis, dan Trino sehat. Trino membaca catalog Iceberg melalui Hive Metastore dan MinIO. Buka:
@@ -79,7 +77,7 @@ Superset menunggu PostgreSQL metadata, Redis, dan Trino sehat. Trino membaca cat
 - Spark History UI: <http://localhost:18080>
 - MinIO Console: <http://localhost:9001>
 
-Airflow Docker memanggil pipeline Spark lokal melalui `http://host.docker.internal:8000/pipeline/run`. Karena itu FastAPI harus aktif di Windows agar DAG Airflow dapat menjalankan pipeline.
+Airflow Docker memanggil pipeline melalui `http://host.docker.internal:8000/pipeline/run`. Karena itu FastAPI harus aktif di Windows agar DAG Airflow dapat menjalankan pipeline.
 
 Kredensial admin Superset berasal dari `SUPERSET_ADMIN_USERNAME`, `SUPERSET_ADMIN_EMAIL`, dan `SUPERSET_ADMIN_PASSWORD` di `.env`.
 

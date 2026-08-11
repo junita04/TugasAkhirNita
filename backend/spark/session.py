@@ -103,6 +103,15 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
         .config("spark.local.dir", SPARK_LOCAL_DIR)
 
         # =====================================================
+        # Iceberg SQL extensions
+        # =====================================================
+
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+        )
+
+        # =====================================================
         # Performance
         # =====================================================
 

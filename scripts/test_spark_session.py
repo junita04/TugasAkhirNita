@@ -50,7 +50,16 @@ class SparkSettingsTests(unittest.TestCase):
         for key in RUNTIME_KEYS:
             os.environ.pop(key, None)
         os.environ.update(values)
-        return importlib.reload(self.settings)
+
+        real_exists = Path.exists
+
+        def _visible_without_env(path, *args, **kwargs):
+            if getattr(path, "name", "") == ".env":
+                return False
+            return real_exists(path, *args, **kwargs)
+
+        with patch.object(Path, "exists", new=_visible_without_env):
+            return importlib.reload(self.settings)
 
     def test_local_profile_defaults_to_local_master_and_filesystem_catalog(self):
         settings = self.load_settings({"SPARK_MODE": "local"})

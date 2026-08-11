@@ -13,10 +13,13 @@ class ComposeArchitectureTests(unittest.TestCase):
         self.assertIn("TRINO_HOST: ${TRINO_HOST:-trino}", compose)
         self.assertIn("TRINO_CATALOG: ${TRINO_CATALOG:-iceberg}", compose)
 
-    def test_env_example_declares_local_cluster_and_trino_values(self):
+    def test_env_example_declares_docker_based_cluster_and_trino_values(self):
         env = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
 
-        self.assertIn("SPARK_MODE=local", env)
+        self.assertIn("SPARK_MODE=cluster", env)
+        self.assertIn("SPARK_MASTER_URL=spark://spark-master:7077", env)
+        self.assertIn("S3_ENDPOINT=http://minio:9000", env)
+        self.assertIn("HIVE_METASTORE_URI=thrift://hive-metastore:9083", env)
         self.assertIn("TRINO_URI=http://trino:8082", env)
         self.assertIn("TRINO_CATALOG=iceberg", env)
 

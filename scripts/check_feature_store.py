@@ -1,4 +1,5 @@
 from backend.spark.session import get_spark
+from backend.config.settings import ICEBERG_NAMESPACE
 
 
 def show_dataset_info(spark, table_name):
@@ -96,12 +97,12 @@ def main():
 
     show_dataset_info(
         spark,
-        "local.feature_store.training_dataset"
+        f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
     )
 
     show_dataset_info(
         spark,
-        "local.feature_store.inference_dataset"
+        f"{ICEBERG_NAMESPACE}.feature_store.inference_dataset"
     )
 
     spark.stop()
