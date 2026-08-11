@@ -31,10 +31,11 @@ class ComposeArchitectureTests(unittest.TestCase):
             section = compose[start:] if end == -1 else compose[start:end]
             self.assertIn("profiles: [spark-docker]", section)
 
-    def test_airflow_uses_host_fastapi_trigger_for_local_spark(self):
+    def test_airflow_dag_runs_pipeline_in_process_to_spark_master(self):
         dag = (PROJECT_ROOT / "docker" / "airflow" / "dags" / "prediction_pipeline.py").read_text(encoding="utf-8")
-        self.assertIn("host.docker.internal:8000/pipeline/run", dag)
-        self.assertNotIn("SparkSubmitOperator", dag)
+        self.assertIn("PythonOperator", dag)
+        self.assertIn("run_pipeline", dag)
+        self.assertNotIn("host.docker.internal", dag)
 
     def test_superset_init_does_not_inherit_web_healthcheck(self):
         compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")

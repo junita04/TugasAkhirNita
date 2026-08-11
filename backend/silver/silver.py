@@ -120,5 +120,3 @@ def process_all_tables():
     logger.info("=" * 60)
     logger.info(f"Total Table Diproses : {total}")
     logger.info("=" * 60)
-
-    spark.stop()

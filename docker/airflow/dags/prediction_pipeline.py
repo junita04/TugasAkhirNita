@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime, timedelta
-from json import loads
-from urllib.request import Request, urlopen
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -11,12 +10,13 @@ from airflow.operators.python import PythonOperator
 # Pipeline Prediksi Tingkat Kelulusan Mahasiswa (ITERA)
 #
 # Alur: Raw Excel -> Bronze -> Silver -> Gold
-#         -> Feature Store -> ML (Naive Bayes) -> Serving
+#         -> Feature Store -> ML (Naive Bayes) -> Prediction
 #
-# Catatan:
-#   - Mode 'cluster': jalankan Spark via spark-master (docker).
-#   - Mode 'local'  : pipeline tetap berjalan di mesin lokal,
-#     DAG ini menjadi kerangka orkestrasi otomatis.
+# Mode Docker: DAG menjalankan pipeline in-process pada container
+# Airflow (driver PySpark) yang tersambung ke Spark Master
+# (`spark://spark-master:7077`, profile `spark-docker`). Source
+# code proyek dimount ke /opt/airflow agar driver dapat mengimpor
+# backend/. Lihat docker-compose.yml untuk volume mount.
 # ============================================================
 
 DEFAULT_ARGS = {
@@ -39,33 +39,30 @@ with DAG(
     def _notify(task_name: str) -> None:
         print(f"[{datetime.now().isoformat()}] Task selesai: {task_name}")
 
+    def _run_spark_pipeline() -> None:
+        if "/opt/airflow" not in sys.path:
+            sys.path.insert(0, "/opt/airflow")
+
+        from backend.services.pipeline_entry import resolve_pipeline_file
+        from backend.services.pipeline_service import run_pipeline
+
+        run_pipeline(resolve_pipeline_file("req_data_rut.xlsx"))
+
     t_start = PythonOperator(
         task_id="start",
         python_callable=_notify,
         op_kwargs={"task_name": "start"},
     )
 
-    def _trigger_host_pipeline() -> None:
-        request = Request(
-            "http://host.docker.internal:8000/pipeline/run",
-            data=b"{}",
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urlopen(request, timeout=30) as response:
-            payload = loads(response.read().decode("utf-8"))
-            if response.status != 200 or payload.get("status") != "success":
-                raise RuntimeError(f"Host pipeline failed: {payload}")
-
     t_pipeline = PythonOperator(
-        task_id="run_local_spark_pipeline",
-        python_callable=_trigger_host_pipeline,
+        task_id="run_spark_pipeline",
+        python_callable=_run_spark_pipeline,
     )
 
     t_publish = PythonOperator(
         task_id="publish_serving",
         python_callable=_notify,
-        op_kwargs={"task_name": "publish_serving (gold -> postgres/trino)"},
+        op_kwargs={"task_name": "publish_serving (gold -> trino/iceberg)"},
     )
 
     t_end = PythonOperator(

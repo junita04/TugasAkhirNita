@@ -1,4 +1,5 @@
 import os
+import sys
 
 from pyspark.sql import SparkSession
 
@@ -16,10 +17,23 @@ from backend.config.settings import (
     S3_ENDPOINT,
     S3_PATH_STYLE_ACCESS,
     HIVE_METASTORE_URI,
+    POSTGRES_ENABLED,
 )
 
 
 SPARK_LOCAL_DIR = os.getenv("SPARK_LOCAL_DIRS", "spark-tmp")
+
+# =====================================================
+# Worker Python (penting di Windows)
+#
+# Tanpa PYSPARK_PYTHON, PySpark memanggil interpreter 'python' apa adanya
+# saat worker subprocess membuat Python UDF. Di Windows hal ini rawan
+# gagal ('Python worker failed to connect back' / 'Accept timed out').
+# Paksa memakai interpreter venv yang sedang berjalan.
+# =====================================================
+
+os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
+os.environ.setdefault("PYSPARK_DRIVER_PYTHON", sys.executable)
 
 
 def _iceberg_configs(spark_builder):
@@ -76,17 +90,43 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
     """
 
     # ==========================================
-    # Tutup SparkSession lama jika masih ada
+    # Reuse SparkSession aktif jika masih ada
+    #
+    # Setiap layer (bronze/silver/gold/feature store) memanggil get_spark().
+    # Memaksa stop + create ulang pada tiap panggilan membuat JVM restart
+    # berkali-kali dan terbukti rawan hang/connection-reset di Windows.
+    # Session dibuat SEKALI lalu dipakai bersama sampai pipeline selesai.
     # ==========================================
 
     active_session = SparkSession.getActiveSession()
 
     if active_session is not None:
-        active_session.stop()
+        return active_session
 
-    # ==========================================
+    # =====================================================
+    # Download dependency otomatis
+    #
+    # Hanya jar yang benar-benar dibutuhkan per mode yang diunduh:
+    #   - Iceberg runtime + Spark-Excel  : selalu
+    #   - PostgreSQL JDBC                : hanya jika serving ke Postgres aktif
+    #   - Hadoop-AWS + AWS SDK (MinIO)   : hanya untuk catalog non-lokal
+    # =====================================================
+
+    packages = [
+        "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2",
+        "com.crealytics:spark-excel_2.12:3.5.1_0.20.4",
+    ]
+
+    if POSTGRES_ENABLED:
+        packages.append("org.postgresql:postgresql:42.7.4")
+
+    if ICEBERG_CATALOG != "local":
+        packages.append("org.apache.hadoop:hadoop-aws:3.3.4")
+        packages.append("com.amazonaws:aws-java-sdk-bundle:1.12.261")
+
+    # =====================================================
     # Membuat SparkSession baru
-    # ==========================================
+    # =====================================================
 
     builder = (
         SparkSession.builder
@@ -118,18 +158,12 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
         .config("spark.sql.shuffle.partitions", "8")
 
         # =====================================================
-        # Download dependency otomatis
+        # Dependency
         # =====================================================
 
         .config(
             "spark.jars.packages",
-            ",".join([
-                "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2",
-                "com.crealytics:spark-excel_2.12:3.5.1_0.20.4",
-                "org.postgresql:postgresql:42.7.4",
-                "org.apache.hadoop:hadoop-aws:3.3.4",
-                "com.amazonaws:aws-java-sdk-bundle:1.12.261",
-            ])
+            ",".join(packages),
         )
 
         # =====================================================

@@ -60,9 +60,11 @@ ICEBERG_CATALOG = os.getenv(
     "local" if SPARK_MODE == "local" else "iceberg",
 )
 ICEBERG_NAMESPACE = ICEBERG_CATALOG
+# Mode lokal memakai URI filesystem (file:///...) karena Hadoop di Windows
+# tidak menangani path absolut ber-backslash tanpa scheme.
 ICEBERG_WAREHOUSE = os.getenv(
     "ICEBERG_WAREHOUSE",
-    str(ICEBERG_DIR) if SPARK_MODE == "local" else "s3a://warehouse/iceberg",
+    ICEBERG_DIR.as_uri() if SPARK_MODE == "local" else "s3a://warehouse/iceberg",
 )
 
 # MinIO (S3) credential untuk mode cluster
@@ -75,6 +77,7 @@ S3_PATH_STYLE_ACCESS = os.getenv("S3_PATH_STYLE_ACCESS", "true").lower() == "tru
 HIVE_METASTORE_URI = os.getenv("HIVE_METASTORE_URI", "thrift://hive-metastore:9083")
 
 # PostgreSQL serving layer untuk Apache Superset
+POSTGRES_ENABLED = os.getenv("POSTGRES_ENABLED", "false").lower() == "true"
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "academic_serving")

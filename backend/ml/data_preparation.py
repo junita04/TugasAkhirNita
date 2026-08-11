@@ -80,6 +80,34 @@ def prepare_training_dataset():
 
     prepared_df = pipeline_model.transform(df)
 
+    # =====================================================
+    # Feature Pipeline (gender indexer + assembler saja)
+    #
+    # Dipakai untuk inferensi sehingga pemetaan gender index
+    # SAMA dengan saat training (StringIndexer order berbasis
+    # frekuensi; mem-fit ulang pada data inferensi dapat
+    # menghasilkan pemetaan yang berbeda). Disimpan di
+    # Model Registry bersama model.
+    # =====================================================
+
+    feature_pipeline = Pipeline(
+        stages=[
+            gender_indexer,
+            assembler
+        ]
+    )
+
+    feature_pipeline_model = feature_pipeline.fit(df)
+
+    # =====================================================
+    # Urutan Label (indeks StringIndexer -> label)
+    #
+    # Diambil dari label_indexer yang sudah di-fit (stage index 1
+    # pada pipeline penuh: [gender_indexer, label_indexer, assembler]).
+    # =====================================================
+
+    label_order = list(pipeline_model.stages[1].labels)
+
     logger.info(f"Rows Prepared Dataset : {prepared_df.count()}")
     logger.info(f"Jumlah Feature : {len(assembler.getInputCols())}")
 
@@ -92,4 +120,4 @@ def prepare_training_dataset():
     logger.info("✓ Prepared Training Dataset berhasil dibuat.")
     logger.info("=" * 60)
 
-    return prepared_df
+    return prepared_df, feature_pipeline_model, label_order

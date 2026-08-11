@@ -25,7 +25,7 @@ def train_model():
     # Data Preparation
     # =====================================================
 
-    prepared_df = prepare_training_dataset()
+    prepared_df, feature_pipeline_model, label_order = prepare_training_dataset()
 
     prepared_df.cache()
 
@@ -133,6 +133,8 @@ def train_model():
         "spark": spark,
         "model": best_model,
         "cross_validator": cv_model,
+        "feature_pipeline_model": feature_pipeline_model,
+        "label_order": label_order,
         "prepared_df": prepared_df,
         "train_df": train_df,
         "test_df": test_df,

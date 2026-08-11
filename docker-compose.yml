@@ -263,6 +263,10 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER:-airflow}:${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}@postgres-airflow:5432/${POSTGRES_AIRFLOW_DB:-airflow}
       AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
+    volumes:
+      - ./backend:/opt/airflow/backend:ro
+      - ./scripts:/opt/airflow/scripts:ro
+      - ./data:/opt/airflow/data:ro
     command: scheduler
     depends_on:
       airflow-init:
@@ -286,6 +290,10 @@ services:
       AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
       AIRFLOW__WEBSERVER__WORKERS: "1"
       AIRFLOW__WEBSERVER__WEB_SERVER_MASTER_TIMEOUT: "300"
+    volumes:
+      - ./backend:/opt/airflow/backend:ro
+      - ./scripts:/opt/airflow/scripts:ro
+      - ./data:/opt/airflow/data:ro
     ports:
       - "${AIRFLOW_WEBSERVER_PORT:-8085}:8080"
     command: webserver
@@ -301,9 +309,18 @@ services:
     build:
       context: ./docker/superset
     profiles: [superset]
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      POSTGRES_USER: ${POSTGRES_USER:-academic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      SUPERSET_DB: ${SUPERSET_DB:-superset}
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
+      SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@example.com}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-change-me}
       REDIS_HOST: redis
       TRINO_HOST: ${TRINO_HOST:-trino}
       TRINO_PORT: ${TRINO_PORT:-8082}
@@ -327,9 +344,18 @@ services:
       context: ./docker/superset
     mem_limit: 2g
     profiles: [superset]
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      POSTGRES_USER: ${POSTGRES_USER:-academic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      SUPERSET_DB: ${SUPERSET_DB:-superset}
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
+      SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@example.com}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-change-me}
       REDIS_HOST: redis
       TRINO_HOST: ${TRINO_HOST:-trino}
       TRINO_PORT: ${TRINO_PORT:-8082}
@@ -347,9 +373,18 @@ services:
     profiles: [superset-worker]
     build:
       context: ./docker/superset
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      POSTGRES_USER: ${POSTGRES_USER:-academic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      SUPERSET_DB: ${SUPERSET_DB:-superset}
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
+      SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@example.com}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-change-me}
       REDIS_HOST: redis
       TRINO_HOST: ${TRINO_HOST:-trino}
       TRINO_PORT: ${TRINO_PORT:-8082}

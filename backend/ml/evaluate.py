@@ -117,6 +117,8 @@ def evaluate_model(training_result):
         # hasil training
         "model": training_result["model"],
         "cross_validator": training_result["cross_validator"],
+        "feature_pipeline_model": training_result["feature_pipeline_model"],
+        "label_order": training_result.get("label_order", []),
 
         # dataset
         "prepared_df": training_result["prepared_df"],

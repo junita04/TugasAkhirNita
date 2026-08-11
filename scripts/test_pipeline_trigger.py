@@ -3,12 +3,12 @@ from unittest.mock import patch
 
 from pathlib import Path
 
-from backend.api.pipeline import resolve_pipeline_file, run_pipeline_for_file
+from backend.services.pipeline_entry import resolve_pipeline_file, run_pipeline_for_file
 
 
 class PipelineTriggerTests(unittest.TestCase):
     def test_runs_default_original_dataset(self):
-        with patch("backend.api.pipeline.run_pipeline") as run_pipeline:
+        with patch("backend.services.pipeline_entry.run_pipeline") as run_pipeline:
             result = run_pipeline_for_file()
 
         self.assertEqual(result["file"], "req_data_rut.xlsx")

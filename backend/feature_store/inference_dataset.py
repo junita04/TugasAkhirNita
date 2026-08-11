@@ -62,18 +62,30 @@ def create_inference_dataset():
 
     # =====================================================
     # Memilih Feature
+    #
+    # Enam fitur model identik dengan training. Jika kolom identitas
+    # mahasiswa (nim) tersedia di Gold, kolom tersebut dipertahankan
+    # sebagai identifier (bukan fitur model) agar hasil prediksi dapat
+    # diperagakan per-mahasiswa pada dashboard Superset.
     # =====================================================
 
-    inference_df = df.select(
+    feature_columns = [
         "jenis_kelamin",
         "estimasi_semester",
         "ipk",
         "total_sks",
         "jumlah_mk",
         "persentase_sks"
-    )
+    ]
 
-    logger.info(f"Jumlah Feature : {len(inference_df.columns)}")
+    select_columns = [
+        column for column in ("nim",) + tuple(feature_columns)
+        if column in df.columns
+    ]
+
+    inference_df = df.select(*select_columns)
+
+    logger.info(f"Jumlah Feature : {len(feature_columns)}")
     logger.info(f"Rows Inference Dataset : {inference_df.count()}")
 
     # =====================================================
