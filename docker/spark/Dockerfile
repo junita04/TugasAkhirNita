@@ -30,4 +30,15 @@ RUN apt-get update \
 
 ENV SPARK_JARS_EXTRA=/opt/bitnami/spark/jars/extra
 
+# UID 1001 harus punya entri di /etc/passwd & /etc/group. Jika tidak, Hadoop's
+# UserGroupInformation -> UnixLoginModule gagal dengan
+# "NullPointerException: invalid null input: name" saat Spark Master start.
+RUN if ! getent passwd 1001 >/dev/null 2>&1; then \
+        if ! getent group 1001 >/dev/null 2>&1; then \
+            echo "sparkdl:x:1001:" >> /etc/group; \
+        fi; \
+        echo "sparkdl:x:1001:1001:Spark:/opt/spark:/bin/bash" >> /etc/passwd; \
+    fi \
+    && chown -R 1001:1001 /opt/spark
+
 USER 1001

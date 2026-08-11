@@ -20,6 +20,12 @@ RUN curl -fsSL -o /opt/hive/lib/hadoop-aws.jar \
         https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.375/aws-java-sdk-bundle-1.11.375.jar
 
 COPY hive-site.xml /opt/hive/conf/hive-site.xml
+COPY entrypoint.sh /opt/hive/bin/entrypoint-wrapper.sh
+RUN chmod +x /opt/hive/bin/entrypoint-wrapper.sh
+
+# Wrapper melakukan substitusi ${env:VAR} di hive-site.xml karena
+# Hadoop/Hive image apache/hive:3.1.3 tidak mengekspansi-nya secara otomatis.
+ENTRYPOINT ["/opt/hive/bin/entrypoint-wrapper.sh"]
 
 # Entrypoint bawaan image memakai DB_DRIVER (default derby).
 # Arahkan ke PostgreSQL dan jalankan service metastore.
