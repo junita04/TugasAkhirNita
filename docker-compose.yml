@@ -111,6 +111,12 @@ services:
     mem_limit: 2g
     environment:
       IS_RESUME: "true"
+      # Kredensial dipakai oleh hive-site.xml (${env:...}). Default mengikuti
+      # .env; boleh diubah tanpa meng-edit file konfigurasi.
+      POSTGRES_HIVE_USER: ${POSTGRES_HIVE_USER:-hive}
+      POSTGRES_HIVE_PASSWORD: ${POSTGRES_HIVE_PASSWORD:-hive-password}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin-password}
     depends_on:
       postgres-hive:
         condition: service_healthy
@@ -189,6 +195,11 @@ services:
     image: trinodb/trino:462
     profiles: [trino]
     mem_limit: 3g
+    environment:
+      # Dipakai oleh catalog/iceberg.properties ($ENV{...}).
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin-password}
+      S3_REGION: ${S3_REGION:-us-east-1}
     ports:
       - "8082:8082"
     volumes:
@@ -263,6 +274,18 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER:-airflow}:${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}@postgres-airflow:5432/${POSTGRES_AIRFLOW_DB:-airflow}
       AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
+      # Mode cluster: driver PySpark (DAG) di container terhubung ke Spark
+      # Master, Iceberg via Hive Metastore, dan warehouse di MinIO.
+      SPARK_MODE: cluster
+      SPARK_MASTER_URL: spark://spark-master:7077
+      ICEBERG_CATALOG: iceberg
+      ICEBERG_WAREHOUSE: s3a://warehouse/iceberg
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin-password}
+      S3_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE_ACCESS: "true"
+      HIVE_METASTORE_URI: thrift://hive-metastore:9083
+      POSTGRES_ENABLED: "false"
     volumes:
       - ./backend:/opt/airflow/backend:ro
       - ./scripts:/opt/airflow/scripts:ro
@@ -290,6 +313,18 @@ services:
       AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
       AIRFLOW__WEBSERVER__WORKERS: "1"
       AIRFLOW__WEBSERVER__WEB_SERVER_MASTER_TIMEOUT: "300"
+      # Mode cluster: driver PySpark (DAG) di container terhubung ke Spark
+      # Master, Iceberg via Hive Metastore, dan warehouse di MinIO.
+      SPARK_MODE: cluster
+      SPARK_MASTER_URL: spark://spark-master:7077
+      ICEBERG_CATALOG: iceberg
+      ICEBERG_WAREHOUSE: s3a://warehouse/iceberg
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin-password}
+      S3_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE_ACCESS: "true"
+      HIVE_METASTORE_URI: thrift://hive-metastore:9083
+      POSTGRES_ENABLED: "false"
     volumes:
       - ./backend:/opt/airflow/backend:ro
       - ./scripts:/opt/airflow/scripts:ro
@@ -370,7 +405,7 @@ services:
     networks: [lakehouse]
 
   superset-worker:
-    profiles: [superset-worker]
+    profiles: [superset]
     build:
       context: ./docker/superset
     env_file:
