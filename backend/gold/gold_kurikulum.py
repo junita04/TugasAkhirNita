@@ -16,7 +16,7 @@ def process_gold_kurikulum():
     # Membaca Silver Layer
     # ===============================
 
-    df = spark.table(f"{ICEBERG_NAMESPACE}.silver.data_kurikulum")
+    df = spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_kurikulum")
 
     logger.info(f"Jumlah Data : {df.count()}")
 

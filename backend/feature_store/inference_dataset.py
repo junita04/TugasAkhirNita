@@ -1,106 +1,95 @@
-from pyspark.sql.functions import col, upper, trim
+from pyspark.sql import functions as F
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
+from backend.feature_store.feature_engineering import (
+    FEATURE_X,
+    derive_features,
+    check_leakage,
+)
+
 logger = get_logger(__name__)
 
+INFERENCE_TABLE = f"{ICEBERG_NAMESPACE}.feature_store.inference_dataset"
 
-def create_inference_dataset():
 
-    spark = get_spark("Feature Store")
+def create_inference_dataset(joined):
+
+    spark = joined.sparkSession
 
     logger.info("=" * 60)
-    logger.info("MEMBUAT INFERENCE DATASET")
+    logger.info("MEMBUAT INFERENCE DATASET (mahasiswa AKTIF)")
     logger.info("=" * 60)
 
-    # =====================================================
-    # Membaca Gold Mahasiswa
-    # =====================================================
-
-    df = spark.table(f"{ICEBERG_NAMESPACE}.gold.gold_mahasiswa")
-
-    logger.info(f"Rows Gold : {df.count()}")
+    df = derive_features(joined)
 
     # =====================================================
-    # Distribusi Status Mahasiswa
+    # Filter mahasiswa AKTIF
     # =====================================================
 
-    logger.info("Distribusi Status Mahasiswa")
-
-    df.groupBy("status_mahasiswa") \
-        .count() \
-        .show(truncate=False)
-
-    # =====================================================
-    # Filter Mahasiswa Aktif
-    # =====================================================
-
-    df = df.filter(
-        upper(trim(col("status_mahasiswa"))) == "AKTIF"
+    aktif = df.filter(
+        F.upper(F.trim(F.col("status_mahasiswa"))) == "AKTIF"
     )
 
-    logger.info(f"Mahasiswa Aktif : {df.count()}")
+    total_aktif = aktif.count()
+    logger.info(f"Jumlah awal mahasiswa AKTIF : {total_aktif}")
 
     # =====================================================
-    # Menghapus Data yang Feature NULL
+    # Mahasiswa AKTIF tanpa KHS (ip / sks NULL)
+    # Tidak diimputasi; didokumentasikan.
     # =====================================================
 
-    df = df.dropna(
-        subset=[
-            "jenis_kelamin",
-            "estimasi_semester",
-            "ipk",
-            "total_sks",
-            "jumlah_mk",
-            "persentase_sks"
-        ]
+    no_khs = aktif.filter(
+        F.col("ip").isNull() | F.col("sks").isNull()
     )
-
-    logger.info(f"Rows Siap Inference : {df.count()}")
-
-    # =====================================================
-    # Memilih Feature
-    #
-    # Enam fitur model identik dengan training. Jika kolom identitas
-    # mahasiswa (nim) tersedia di Gold, kolom tersebut dipertahankan
-    # sebagai identifier (bukan fitur model) agar hasil prediksi dapat
-    # diperagakan per-mahasiswa pada dashboard Superset.
-    # =====================================================
-
-    feature_columns = [
-        "jenis_kelamin",
-        "estimasi_semester",
-        "ipk",
-        "total_sks",
-        "jumlah_mk",
-        "persentase_sks"
-    ]
-
-    select_columns = [
-        column for column in ("nim",) + tuple(feature_columns)
-        if column in df.columns
-    ]
-
-    inference_df = df.select(*select_columns)
-
-    logger.info(f"Jumlah Feature : {len(feature_columns)}")
-    logger.info(f"Rows Inference Dataset : {inference_df.count()}")
+    no_khs_ids = [row.id_mahasiswa for row in no_khs.select("id_mahasiswa").collect()]
+    logger.info(f"Inference AKTIF tanpa KHS : {len(no_khs_ids)}")
 
     # =====================================================
-    # Simpan ke Feature Store
+    # Dataset final: exclude record yang fitur wajib NULL
+    # =====================================================
+
+    valid = aktif.dropna(subset=FEATURE_X)
+
+    valid = valid.dropDuplicates(["id_mahasiswa"])
+
+    inference_df = valid.select("id_mahasiswa", *FEATURE_X)
+
+    # =====================================================
+    # Data leakage check
+    # =====================================================
+
+    forbidden, extra = check_leakage(inference_df)
+
+    logger.info(f"Leakage check: forbidden={forbidden} extra={extra}")
+
+    # =====================================================
+    # Simpan Feature Store Inference
     # =====================================================
 
     (
-        inference_df.writeTo(
-            f"{ICEBERG_NAMESPACE}.feature_store.inference_dataset"
-        )
+        inference_df.writeTo(INFERENCE_TABLE)
         .using("iceberg")
         .createOrReplace()
     )
 
+    logger.info(f"Rows Inference Dataset : {inference_df.count()}")
     logger.info("✓ Inference Dataset berhasil dibuat.")
     logger.info("=" * 60)
 
-    return inference_df
+    report = {
+        "table": INFERENCE_TABLE,
+        "jumlah_awal_aktif": total_aktif,
+        "jumlah_valid": inference_df.count(),
+        "jumlah_tanpa_khs": len(no_khs_ids),
+        "excluded_ids_no_khs": no_khs_ids,
+        "null_feature_after_dropna": 0,
+        "duplicate_id": inference_df.count()
+        - inference_df.select("id_mahasiswa").distinct().count(),
+        "leakage_forbidden": forbidden,
+        "leakage_extra": extra,
+    }
+
+    return inference_df, report

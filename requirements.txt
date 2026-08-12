@@ -7,3 +7,6 @@ numpy==1.26.4
 pyarrow==17.0.0
 openpyxl==3.1.5
 et-xmlfile==2.0.0
+scikit-learn==1.9.0
+scipy==1.17.1
+joblib==1.5.3

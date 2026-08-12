@@ -1,107 +1,142 @@
+import json
 import os
 import shutil
 from datetime import datetime
 
+import joblib
+
+from backend.config.settings import MODEL_DIR
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+MODEL_NAME = "gaussian_nb_lulusan"
+
 # =====================================================
-# Folder Registry
+# Revisi Tahap 5 (v2.0.0): tanpa StandardScaler.
+# Versi lama (v1.0.0) memakai StandardScaler dan TIDAK
+# ditimpa. Artifact revisi disimpan pada direktori baru.
 # =====================================================
+MODEL_VERSION = "v2.0.0"
 
-MODEL_DIR = "models"
-
-CLASSIFIER_PATH = os.path.join(
-    MODEL_DIR,
-    "gaussian_nb"
-)
-
-FEATURE_PIPELINE_PATH = os.path.join(
-    MODEL_DIR,
-    "feature_pipeline"
-)
-
-METADATA_PATH = os.path.join(
-    MODEL_DIR,
-    "metadata.txt"
-)
+ARTIFACT_DIR = os.path.join(MODEL_DIR, "gaussian_nb_v2")
 
 
-def save_model(evaluation_result):
+def _variant_dir(use_smote):
+    """Subdirektori artifact per varian (revisi Tahap 5)."""
+    sub = "with_smote" if use_smote else "without_smote"
+    return os.path.join(ARTIFACT_DIR, sub)
+
+
+def _paths(use_smote):
+    directory = _variant_dir(use_smote)
+    return {
+        "dir": directory,
+        "model": os.path.join(directory, "model.joblib"),
+        "metadata": os.path.join(directory, "metadata.json"),
+    }
+
+
+def save_model(training_result):
     """
-    Menyimpan model terbaik hasil training beserta metadata model.
+    Menyimpan model final (GaussianNB, TANPA StandardScaler) beserta
+    metadata lengkap ke Model Registry.
 
-    Selain model Naive Bayes, disimpan juga pipeline fitur yang sudah
-    di-fit pada data training (StringIndexer jenis kelamin + VectorAssembler)
-    agar pemetaan indeks fitur pada saat inferensi identik dengan training.
+    MODEL A (without_smote): GaussianNB()
+    MODEL B (with_smote)   : SMOTE + GaussianNB (imblearn pipeline)
+
+    Metadata mencatat:
+      - variant (without_smote / with_smote)
+      - preprocessing (kosong, tanpa scaler)
+      - feature names, class mapping, cv summary, holdout metrics.
     """
+
+    use_smote = training_result.get("use_smote", False)
+    variant = "with_smote" if use_smote else "without_smote"
 
     logger.info("=" * 60)
-    logger.info("MODEL REGISTRY")
+    logger.info(f"MODEL REGISTRY - SAVE ({variant.upper()}) v{MODEL_VERSION}")
     logger.info("=" * 60)
 
-    model = evaluation_result["model"]
-    feature_pipeline_model = evaluation_result["feature_pipeline_model"]
-    label_order = list(evaluation_result.get("label_order", []))
+    pipeline_full = training_result["pipeline_full"]
+
+    paths = _paths(use_smote)
+
+    if os.path.exists(paths["dir"]):
+        shutil.rmtree(paths["dir"])
+
+    os.makedirs(paths["dir"], exist_ok=True)
 
     # =====================================================
-    # Hapus model lama
+    # Simpan artifact
     # =====================================================
 
-    for path in (CLASSIFIER_PATH, FEATURE_PIPELINE_PATH):
-        if os.path.exists(path):
-            shutil.rmtree(path)
+    joblib.dump(pipeline_full, paths["model"])
+
+    logger.info(f"✓ Model artifact tersimpan : {paths['model']}")
 
     # =====================================================
-    # Simpan Model
+    # Metadata
     # =====================================================
 
-    logger.info("Menyimpan Gaussian Naive Bayes...")
+    metadata = {
+        "model_name": MODEL_NAME,
+        "model_version": MODEL_VERSION,
+        "variant": variant,
+        "use_smote": use_smote,
+        "sampling": {"method": "SMOTE" if use_smote else None},
+        "model_type": "GaussianNB",
+        "preprocessing": [],  # revisi Tahap 5: TANPA scaler
+        "has_scaler": False,
+        "feature_names": training_result["feature_columns"],
+        "target_name": training_result["target_column"],
+        "identifier_column": training_result["identifier_column"],
+        "positive_class": training_result["positive_class"],
+        "class_mapping": training_result["class_mapping"],
+        "class_distribution": training_result["class_distribution"],
+        "training_row_count": training_result["n_records"],
+        "trained_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "cv": training_result["cv"],
+        "cv_summary": training_result["cv_summary"],
+        "holdout": training_result["holdout"],
+        "test_size": training_result["test_size"],
+        "random_state": training_result["random_state"],
+        "artifact_path": paths["model"],
+    }
 
-    model.save(CLASSIFIER_PATH)
+    with open(paths["metadata"], "w", encoding="utf-8") as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-    logger.info("✓ Model berhasil disimpan.")
-
-    # =====================================================
-    # Simpan Feature Pipeline
-    # =====================================================
-
-    logger.info("Menyimpan Feature Pipeline...")
-
-    feature_pipeline_model.save(FEATURE_PIPELINE_PATH)
-
-    logger.info("✓ Feature Pipeline berhasil disimpan.")
-
-    # =====================================================
-    # Simpan Metadata
-    # =====================================================
-
-    with open(METADATA_PATH, "w", encoding="utf-8") as f:
-
-        f.write("MODEL REGISTRY\n")
-        f.write("=" * 40 + "\n")
-        f.write(f"Tanggal     : {datetime.now()}\n")
-        f.write("Algoritma   : Gaussian Naive Bayes\n")
-        f.write(f"Accuracy    : {evaluation_result['accuracy']:.4f}\n")
-        f.write(f"Precision   : {evaluation_result['precision']:.4f}\n")
-        f.write(f"Recall      : {evaluation_result['recall']:.4f}\n")
-        f.write(f"F1 Score    : {evaluation_result['f1_score']:.4f}\n")
-        f.write(f"Label Order : {label_order}\n")
-
-    logger.info("✓ Metadata berhasil disimpan.")
+    logger.info(f"✓ Metadata tersimpan       : {paths['metadata']}")
 
     logger.info("=" * 60)
     logger.info("MODEL BERHASIL DISIMPAN")
     logger.info("=" * 60)
 
-    logger.info(f"Model           : {CLASSIFIER_PATH}")
-    logger.info(f"Feature Pipeline: {FEATURE_PIPELINE_PATH}")
-    logger.info(f"Metadata        : {METADATA_PATH}")
-
     return {
-        "model_path": CLASSIFIER_PATH,
-        "feature_pipeline_path": FEATURE_PIPELINE_PATH,
-        "metadata_path": METADATA_PATH,
-        "label_order": label_order,
+        "model_name": MODEL_NAME,
+        "model_version": MODEL_VERSION,
+        "variant": variant,
+        "artifact_path": paths["model"],
+        "metadata_path": paths["metadata"],
     }
+
+
+def load_model(use_smote=False):
+    """
+    Memuat model artifact (revisi v2.0.0) dari Model Registry.
+    """
+
+    paths = _paths(use_smote)
+
+    if not os.path.exists(paths["model"]):
+        raise FileNotFoundError(
+            f"Model artifact tidak ditemukan: {paths['model']}"
+        )
+
+    pipeline = joblib.load(paths["model"])
+
+    with open(paths["metadata"], "r", encoding="utf-8") as f:
+        metadata = json.load(f)
+
+    return pipeline, metadata

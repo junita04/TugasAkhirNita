@@ -1,5 +1,4 @@
-from pyspark.ml import Pipeline
-from pyspark.ml.feature import StringIndexer, VectorAssembler
+import numpy as np
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
@@ -7,117 +6,145 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+TRAINING_TABLE = f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
 
-def prepare_training_dataset():
+TARGET_COLUMN = "status_kelulusan"
+IDENTIFIER_COLUMN = "id_mahasiswa"
 
-    spark = get_spark("Machine Learning")
+FEATURE_COLUMNS = [
+    "ip",
+    "sks",
+    "angkatan",
+    "jumlah_mk",
+]
 
-    logger.info("=" * 60)
-    logger.info("MEMBUAT PREPARED TRAINING DATASET")
-    logger.info("=" * 60)
+FORBIDDEN_FEATURES = [
+    IDENTIFIER_COLUMN,  # hanya identifier, bukan X
+    "lama_studi",
+    "tanggal_keluar",
+    "ipk",
+    "total_sks",
+    "status_mahasiswa",
+    "status_kelulusan",
+]
 
-    # =====================================================
-    # Membaca Training Dataset
-    # =====================================================
+POSITIVE_CLASS = "Tepat Waktu"
 
-    df = spark.table(
-        f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
-    )
 
-    logger.info(f"Rows Training Dataset : {df.count()}")
+def load_training_dataset():
+    """
+    Membaca training dataset dari Feature Store dan mengembalikannya
+    sebagai pandas DataFrame.
 
-    logger.info("Distribusi Label")
+    Training dataset (Tahap 4) sudah bersih: tidak ada null pada fitur
+    wajib, tidak ada duplicate id (grain 1 baris = 1 mahasiswa LULUS).
+    """
 
-    df.groupBy(
-        "status_kelulusan"
-    ).count().show(truncate=False)
-
-    # =====================================================
-    # String Indexer
-    # =====================================================
-
-    gender_indexer = StringIndexer(
-        inputCol="jenis_kelamin",
-        outputCol="jenis_kelamin_index",
-        handleInvalid="keep"
-    )
-
-    label_indexer = StringIndexer(
-        inputCol="status_kelulusan",
-        outputCol="label",
-        handleInvalid="keep"
-    )
-
-    # =====================================================
-    # Vector Assembler
-    # =====================================================
-
-    assembler = VectorAssembler(
-        inputCols=[
-            "jenis_kelamin_index",
-            "estimasi_semester",
-            "ipk",
-            "total_sks",
-            "jumlah_mk",
-            "persentase_sks"
-        ],
-        outputCol="features"
-    )
-
-    # =====================================================
-    # Pipeline
-    # =====================================================
-
-    pipeline = Pipeline(
-        stages=[
-            gender_indexer,
-            label_indexer,
-            assembler
-        ]
-    )
-
-    pipeline_model = pipeline.fit(df)
-
-    prepared_df = pipeline_model.transform(df)
-
-    # =====================================================
-    # Feature Pipeline (gender indexer + assembler saja)
-    #
-    # Dipakai untuk inferensi sehingga pemetaan gender index
-    # SAMA dengan saat training (StringIndexer order berbasis
-    # frekuensi; mem-fit ulang pada data inferensi dapat
-    # menghasilkan pemetaan yang berbeda). Disimpan di
-    # Model Registry bersama model.
-    # =====================================================
-
-    feature_pipeline = Pipeline(
-        stages=[
-            gender_indexer,
-            assembler
-        ]
-    )
-
-    feature_pipeline_model = feature_pipeline.fit(df)
-
-    # =====================================================
-    # Urutan Label (indeks StringIndexer -> label)
-    #
-    # Diambil dari label_indexer yang sudah di-fit (stage index 1
-    # pada pipeline penuh: [gender_indexer, label_indexer, assembler]).
-    # =====================================================
-
-    label_order = list(pipeline_model.stages[1].labels)
-
-    logger.info(f"Rows Prepared Dataset : {prepared_df.count()}")
-    logger.info(f"Jumlah Feature : {len(assembler.getInputCols())}")
+    spark = get_spark("ML Data Preparation")
 
     logger.info("=" * 60)
-    logger.info("SCHEMA PREPARED DATASET")
+    logger.info("MEMUAT TRAINING DATASET (FEATURE STORE)")
     logger.info("=" * 60)
 
-    prepared_df.printSchema()
+    df = spark.table(TRAINING_TABLE)
 
-    logger.info("✓ Prepared Training Dataset berhasil dibuat.")
-    logger.info("=" * 60)
+    pdf = df.toPandas()
 
-    return prepared_df, feature_pipeline_model, label_order
+    logger.info(f"Rows         : {len(pdf)}")
+    logger.info(f"Kolom        : {list(pdf.columns)}")
+
+    _validate_dataset(pdf)
+
+    return pdf
+
+
+def _validate_dataset(pdf):
+    """Validasi dataset sebelum modeling: schema, null, duplicate, distribusi."""
+
+    expected = set(FEATURE_COLUMNS) | {TARGET_COLUMN, IDENTIFIER_COLUMN}
+    extra = [column for column in pdf.columns if column not in expected]
+    if extra:
+        raise RuntimeError(f"Kolom di luar schema training dataset: {extra}")
+
+    missing = [c for c in expected if c not in pdf.columns]
+    if missing:
+        raise RuntimeError(f"Kolom yang dibutuhkan tidak ditemukan: {missing}")
+
+    null_features = {
+        column: int(pdf[column].isnull().sum())
+        for column in FEATURE_COLUMNS
+    }
+    null_target = int(pdf[TARGET_COLUMN].isnull().sum())
+
+    duplicate_id = int(pdf[IDENTIFIER_COLUMN].duplicated().sum())
+    total = len(pdf)
+    distinct_id = int(pdf[IDENTIFIER_COLUMN].nunique())
+
+    class_dist = pdf[TARGET_COLUMN].value_counts().to_dict()
+
+    logger.info(f"Distinct id             : {distinct_id}")
+    logger.info(f"Duplicate id            : {duplicate_id}")
+    logger.info(f"Null fitur              : {null_features}")
+    logger.info(f"Null target             : {null_target}")
+    logger.info(f"Grain 1 baris = 1 mhs   : {'PASS' if total == distinct_id else 'FAIL'}")
+    logger.info(f"Distribusi target       : {class_dist}")
+
+    if duplicate_id != 0:
+        raise RuntimeError(f"Duplicate id_mahasiswa ditemukan: {duplicate_id}")
+
+    null_values = {k: v for k, v in null_features.items() if v}
+    if null_values:
+        logger.warning(f"Nilai null pada fitur wajib (tidak diimputasi): {null_values}")
+
+    if null_target:
+        logger.warning(f"Nilai null pada target: {null_target}")
+
+
+def check_model_leakage(pdf):
+    """
+    Pemeriksaan leakage otomatis sebelum training.
+
+    Hanya X = [ip, sks, angkatan, jumlah_mk] yang boleh masuk input model.
+    Y = status_kelulusan (label), id_mahasiswa = identifier.
+    """
+
+    allowed = set(FEATURE_COLUMNS) | {TARGET_COLUMN, IDENTIFIER_COLUMN}
+
+    unexpected = [c for c in pdf.columns if c not in allowed]
+    if unexpected:
+        raise RuntimeError(
+            "DATA LEAKAGE DETECTED: "
+            f"kolom di luar X/Y terdeteksi: {unexpected}. "
+            "Training dihentikan."
+        )
+
+    return []
+
+
+def build_target_encoding(pdf):
+    """
+    Enkoding target kategori -> integer.
+
+    Mapping berbasis urutan asli kelas (prediktabilitas dan konsistensi):
+      - Tepat Waktu -> 0
+      - Terlambat  -> 1
+
+    Dictionary mapping disimpan agar konsisten saat inferensi.
+    """
+
+    classes = sorted(pdf[TARGET_COLUMN].unique().tolist())
+    mapping = {label: index for index, label in enumerate(classes)}
+
+    logger.info(f"Class mapping : {mapping}")
+
+    return mapping
+
+
+def encode_target(pdf, mapping):
+    y = pdf[TARGET_COLUMN].map(mapping).astype(int)
+    return y
+
+
+def numpy_X(pdf):
+    X = pdf[FEATURE_COLUMNS].astype(float).to_numpy()
+    return X

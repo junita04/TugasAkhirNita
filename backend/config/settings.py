@@ -84,3 +84,13 @@ POSTGRES_DB = os.getenv("POSTGRES_DB", "academic_serving")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "academic")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "change-me")
 POSTGRES_SCHEMA = os.getenv("POSTGRES_SCHEMA", "public")
+
+# =====================================================
+# Threshold kelulusan "Tepat Waktu"
+#
+# Business rule penelitian (docs/REVIEW_PROJECT.md, docs/ALUR_PENGERJAAN.md):
+# mahasiswa dianggap lulus "Tepat Waktu" bila lama studi <= 4 tahun.
+# Berbasis 8 semester (4 tahun) dengan nilai dasar hari: 4 * 365 = 1460.
+# =====================================================
+GRADUATION_LIMIT_YEARS = 4
+GRADUATION_LIMIT_DAYS = GRADUATION_LIMIT_YEARS * 365

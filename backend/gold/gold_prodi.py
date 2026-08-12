@@ -16,7 +16,7 @@ def process_gold_program_studi():
     # Membaca Silver Layer
     # ===============================
 
-    df = spark.table(f"{ICEBERG_NAMESPACE}.silver.data_program_studi")
+    df = spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_program_studi")
 
     logger.info(f"Jumlah Data : {df.count()}")
 
