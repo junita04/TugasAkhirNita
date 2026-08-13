@@ -19,6 +19,12 @@ RUN curl -fsSL -o /opt/hive/lib/hadoop-aws.jar \
     curl -fsSL -o /opt/hive/lib/aws-java-sdk-bundle.jar \
         https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.375/aws-java-sdk-bundle-1.11.375.jar
 
+# Symlink lokasi warehouse Iceberg lokal (D:/TA/...) agar HMS dapat memvalidasi
+# direktori lokasi tabel saat register_table/create_table (Trino memakai path ini).
+# Target /data/iceberg diisi bind-mount ./iceberg:/data/iceberg (ro) dari compose.
+RUN mkdir -p /D:/TA/TugasAkhirNita && \
+    ln -sfn /data/iceberg /D:/TA/TugasAkhirNita/iceberg
+
 COPY hive-site.xml /opt/hive/conf/hive-site.xml
 COPY entrypoint.sh /opt/hive/bin/entrypoint-wrapper.sh
 RUN chmod +x /opt/hive/bin/entrypoint-wrapper.sh

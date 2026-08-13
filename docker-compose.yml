@@ -117,6 +117,11 @@ services:
       POSTGRES_HIVE_PASSWORD: ${POSTGRES_HIVE_PASSWORD:-hive-password}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin-password}
+    volumes:
+      # Warehouse Iceberg lokal, diakses via symlink /D:/TA/... di image
+      # (lihat Dockerfile) agar HMS bisa memvalidasi lokasi tabel pada
+      # register_table/create_table.
+      - ./iceberg:/data/iceberg:ro
     depends_on:
       postgres-hive:
         condition: service_healthy
@@ -178,11 +183,11 @@ services:
       context: ./docker/spark
     command: /opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer
     environment:
-      SPARK_HISTORY_OPTS: "-Dspark.history.fs.logDirectory=file:/opt/bitnami/spark/logs"
+      SPARK_HISTORY_OPTS: "-Dspark.history.fs.logDirectory=file:///opt/bitnami/spark/logs"
     ports:
-      - "18080:18080"
+      - "18081:18080"
     volumes:
-      - spark-logs:/opt/bitnami/spark/logs
+      - D:/TA/TugasAkhirNita/spark-events:/opt/bitnami/spark/logs
     depends_on:
       spark-master:
         condition: service_healthy
@@ -202,11 +207,14 @@ services:
       S3_REGION: ${S3_REGION:-us-east-1}
     ports:
       - "8082:8082"
+    user: root
+    entrypoint: ["/bin/bash", "-c", "mkdir -p /D:/TA/TugasAkhirNita && ln -sfn /data/iceberg /D:/TA/TugasAkhirNita/iceberg && exec /usr/lib/trino/bin/run-trino"]
     volumes:
       - ./docker/trino/config.properties:/etc/trino/config.properties:ro
       - ./docker/trino/node.properties:/etc/trino/node.properties:ro
       - ./docker/trino/jvm.config:/etc/trino/jvm.config:ro
       - ./docker/trino/catalog:/etc/trino/catalog:ro
+      - ./iceberg:/data/iceberg:ro
     depends_on:
       hive-metastore:
         condition: service_healthy
@@ -290,6 +298,7 @@ services:
       - ./backend:/opt/airflow/backend:ro
       - ./scripts:/opt/airflow/scripts:ro
       - ./data:/opt/airflow/data:ro
+      - ./docker/airflow/dags:/opt/airflow/dags:ro
     command: scheduler
     depends_on:
       airflow-init:
@@ -329,6 +338,7 @@ services:
       - ./backend:/opt/airflow/backend:ro
       - ./scripts:/opt/airflow/scripts:ro
       - ./data:/opt/airflow/data:ro
+      - ./docker/airflow/dags:/opt/airflow/dags:ro
     ports:
       - "${AIRFLOW_WEBSERVER_PORT:-8085}:8080"
     command: webserver
@@ -359,7 +369,7 @@ services:
       REDIS_HOST: redis
       TRINO_HOST: ${TRINO_HOST:-trino}
       TRINO_PORT: ${TRINO_PORT:-8082}
-      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg}
+      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg_local}
       TRINO_USER: ${TRINO_USER:-trino}
     depends_on:
       postgres:
@@ -394,7 +404,7 @@ services:
       REDIS_HOST: redis
       TRINO_HOST: ${TRINO_HOST:-trino}
       TRINO_PORT: ${TRINO_PORT:-8082}
-      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg}
+      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg_local}
       TRINO_USER: ${TRINO_USER:-trino}
     depends_on:
       superset-init:
@@ -423,7 +433,7 @@ services:
       REDIS_HOST: redis
       TRINO_HOST: ${TRINO_HOST:-trino}
       TRINO_PORT: ${TRINO_PORT:-8082}
-      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg}
+      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg_local}
       TRINO_USER: ${TRINO_USER:-trino}
     depends_on:
       superset-init:

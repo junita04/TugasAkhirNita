@@ -15,7 +15,7 @@ TMP="$CONF_DIR/hive-site.xml.generated"
 vars=(POSTGRES_HIVE_USER POSTGRES_HIVE_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD)
 
 : > "$TMP"
-while IFS= read -r line < "$SITE"; do
+while IFS= read -r line; do
     for var in "${vars[@]}"; do
         value="${!var:-}"
         if [ -n "$value" ]; then
@@ -23,7 +23,7 @@ while IFS= read -r line < "$SITE"; do
         fi
     done
     printf '%s\n' "$line" >> "$TMP"
-done
+done < "$SITE"
 
 mv -f "$TMP" "$SITE"
 
