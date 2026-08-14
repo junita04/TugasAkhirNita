@@ -1,0 +1,97 @@
+{
+  "script": "measure_inference.py",
+  "source": "local.feature_store.inference_dataset (parquet aktif, eager, tanpa Spark)",
+  "rows": 14926,
+  "distinct_id": 14926,
+  "n_features": 4,
+  "n_runs": 5,
+  "warmup_runs": 1,
+  "model_name": "gaussian_nb_lulusan",
+  "model_version": "v2.0.0",
+  "eager": true,
+  "spark_lazy_eval": false,
+  "components_measured": [
+    "input_preparation",
+    "model_load",
+    "predict",
+    "predict_proba",
+    "end_to_end"
+  ],
+  "validation": {
+    "rows_14926": true,
+    "unique_id": true,
+    "agreement_with_production_percent": 100.0
+  },
+  "summary_sec": {
+    "inference_without_smote_input_preparation": {
+      "mean_sec": 0.00040154,
+      "median_sec": 0.0002976,
+      "min_sec": 0.0002724,
+      "max_sec": 0.0007176,
+      "std_sec": 0.000186224
+    },
+    "inference_without_smote_model_load": {
+      "mean_sec": 0.00030108,
+      "median_sec": 0.0002665,
+      "min_sec": 0.0002544,
+      "max_sec": 0.0004317,
+      "std_sec": 7.4073e-05
+    },
+    "inference_without_smote_predict": {
+      "mean_sec": 0.00046516,
+      "median_sec": 0.0004489,
+      "min_sec": 0.0004171,
+      "max_sec": 0.0005606,
+      "std_sec": 5.6462e-05
+    },
+    "inference_without_smote_predict_proba": {
+      "mean_sec": 0.0009277,
+      "median_sec": 0.0009128,
+      "min_sec": 0.0008858,
+      "max_sec": 0.0010104,
+      "std_sec": 4.7882e-05
+    },
+    "inference_without_smote_end_to_end": {
+      "mean_sec": 0.00213016,
+      "median_sec": 0.0020433,
+      "min_sec": 0.001942,
+      "max_sec": 0.0024444,
+      "std_sec": 0.000209167
+    },
+    "inference_with_smote_input_preparation": {
+      "mean_sec": 0.0003545,
+      "median_sec": 0.0002749,
+      "min_sec": 0.0002286,
+      "max_sec": 0.0006304,
+      "std_sec": 0.00017034
+    },
+    "inference_with_smote_model_load": {
+      "mean_sec": 0.0005555,
+      "median_sec": 0.0005231,
+      "min_sec": 0.0005099,
+      "max_sec": 0.0006695,
+      "std_sec": 6.6631e-05
+    },
+    "inference_with_smote_predict": {
+      "mean_sec": 0.00050228,
+      "median_sec": 0.0004672,
+      "min_sec": 0.0004511,
+      "max_sec": 0.0006309,
+      "std_sec": 7.3872e-05
+    },
+    "inference_with_smote_predict_proba": {
+      "mean_sec": 0.00100166,
+      "median_sec": 0.0010183,
+      "min_sec": 0.0009641,
+      "max_sec": 0.00103,
+      "std_sec": 3.3156e-05
+    },
+    "inference_with_smote_end_to_end": {
+      "mean_sec": 0.00253902,
+      "median_sec": 0.0025584,
+      "min_sec": 0.0023862,
+      "max_sec": 0.0026773,
+      "std_sec": 0.000108091
+    }
+  }
+}

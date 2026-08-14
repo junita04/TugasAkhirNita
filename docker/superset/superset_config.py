@@ -1,6 +1,8 @@
 import os
 from urllib.parse import quote_plus
 
+from flask_caching.backends.rediscache import RedisCache
+
 
 SECRET_KEY = os.environ["SUPERSET_SECRET_KEY"]
 SQLALCHEMY_DATABASE_URI = (
@@ -11,7 +13,13 @@ SQLALCHEMY_DATABASE_URI = (
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
-RESULTS_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
+RESULTS_BACKEND = RedisCache(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=1,
+    key_prefix="superset_results",
+    default_timeout=86400,
+)
 
 CELERY_CONFIG = {
     "broker_url": f"redis://{REDIS_HOST}:{REDIS_PORT}/0",

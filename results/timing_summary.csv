@@ -1,0 +1,15 @@
+category,scenario,stage,rows,runs,mean_sec,median_sec,min_sec,max_sec,std_sec,resampled_rows
+training,training_without_smote,fit,13347,5,0.00130334,0.0012732,0.0012423,0.0014182,7.3921e-05,
+training,training_with_smote,smote_fit_resample,13347,5,0.01248956,0.012751,0.011487,0.0131449,0.000666403,20272.0
+training,training_with_smote,gnb_fit_after_smote,20272,5,0.0018015,0.0017378,0.0017091,0.0019234,0.000104995,20272.0
+training,training_with_smote,fit_total,13347,5,0.0128809,0.0128412,0.0125504,0.0132956,0.000271127,20272.0
+inference,inference_without_smote,input_preparation,14926,5,0.00040154,0.0002976,0.0002724,0.0007176,0.000186224,
+inference,inference_without_smote,model_load,14926,5,0.00030108,0.0002665,0.0002544,0.0004317,7.4073e-05,
+inference,inference_without_smote,predict,14926,5,0.00046516,0.0004489,0.0004171,0.0005606,5.6462e-05,
+inference,inference_without_smote,predict_proba,14926,5,0.0009277,0.0009128,0.0008858,0.0010104,4.7882e-05,
+inference,inference_without_smote,end_to_end,14926,5,0.00213016,0.0020433,0.001942,0.0024444,0.000209167,
+inference,inference_with_smote,input_preparation,14926,5,0.0003545,0.0002749,0.0002286,0.0006304,0.00017034,
+inference,inference_with_smote,model_load,14926,5,0.0005555,0.0005231,0.0005099,0.0006695,6.6631e-05,
+inference,inference_with_smote,predict,14926,5,0.00050228,0.0004672,0.0004511,0.0006309,7.3872e-05,
+inference,inference_with_smote,predict_proba,14926,5,0.00100166,0.0010183,0.0009641,0.00103,3.3156e-05,
+inference,inference_with_smote,end_to_end,14926,5,0.00253902,0.0025584,0.0023862,0.0026773,0.000108091,
