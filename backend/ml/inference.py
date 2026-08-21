@@ -2,7 +2,7 @@
 Tahap 6 — Inference / Prediction Pipeline (VERSI PARQUET).
 
 Membaca inference dataset (mahasiswa AKTIF) dari Feature Store, memuat KEDUA
-model final revisi Tahap 5 dari Model Registry (v2.0.0, TANPA StandardScaler):
+model final revisi Tahap 3 dari Model Registry (v3.0.0, TANPA StandardScaler):
 
   * MODEL A (without_smote): GaussianNB()
   * MODEL B (with_smote)   : SMOTE + GaussianNB (imblearn pipeline)
@@ -194,7 +194,7 @@ def validate_schema(pdf):
 
 def load_final_model(use_smote):
     """
-    Memuat model final revisi Tahap 5 (v2.0.0) dari Model Registry.
+    Memuat model final revisi Tahap 3 (v3.0.0) dari Model Registry.
 
     Memakai metadata untuk memvalidasi konsistensi feature training dan
     memastikan StandardScaler TIDAK ada.
@@ -224,17 +224,17 @@ def load_final_model(use_smote):
         raise InferenceError(
             "MISMATCH feature: training artifact memakai "
             f"{training_features} tetapi inference memakai {INFERENCE_FEATURES}. "
-            "Gunakan artifact model revisi Tahap 5 (v2.0.0)."
+            "Gunakan artifact model revisi Tahap 3 (v3.0.0)."
         )
 
     if metadata.get("has_scaler", True):
         raise InferenceError(
             "Artifact masih memakai StandardScaler (v1). Gunakan artifact "
-            "revisi Tahap 5 (v2.0.0) tanpa scaler."
+            "revisi Tahap 3 (v3.0.0) tanpa scaler."
         )
 
     logger.info(
-        "Feature inference konsisten dengan feature training revisi Tahap 5: "
+        "Feature inference konsisten dengan feature training revisi Tahap 3: "
         f"{INFERENCE_FEATURES}"
     )
 
@@ -514,7 +514,7 @@ def run_inference(smoke_test=False, limit=None):
     Orkestrator Tahap 6 (versi Parquet):
       load inference dataset
       -> validasi schema
-      -> untuk tiap varian: load model v2.0.0 -> prediksi -> simpan
+      -> untuk tiap varian: load model v3.0.0 -> prediksi -> simpan
          Parquet biasa -> quality gate output
       -> perbandingan agreement/disagreement antar model
       -> tulis quality report
@@ -558,7 +558,7 @@ def run_inference(smoke_test=False, limit=None):
                 f"{len(result_pdf)} rows, label={sorted(result_pdf[PREDICTION_LABEL_COLUMN].unique())}"
             )
 
-        logger.info("SMOKE TEST SELESAI — jalankan penuh 14.926 mahasiswa.")
+        logger.info("SMOKE TEST SELESAI — jalankan penuh inference dataset.")
         return {"smoke_test": True, "schema_validation": schema_report,
                 "status": "SMOKE_TEST_PASS"}
 
@@ -679,7 +679,7 @@ def print_report(report):
     if report.get("smoke_test"):
         print("# SMOKE TEST")
         print(f"  Status : {report['status']}")
-        print("  Jalankan inference penuh 14.926 mahasiswa setelah ini.")
+        print("  Jalankan inference penuh setelah ini.")
         print("=" * 88)
         return
 
@@ -695,7 +695,7 @@ def print_report(report):
     print("  - logs/inference_quality_report.json")
 
     print()
-    print("# B. MODEL ARTIFACT (v2.0.0, tanpa StandardScaler)")
+    print("# B. MODEL ARTIFACT (v3.0.0, tanpa StandardScaler)")
     for variant, vr in report["variants"].items():
         m = vr["model"]
         print(f"  [{variant}]")

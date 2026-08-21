@@ -81,7 +81,7 @@ def extract_model(estimator):
 
 def train_model(use_smote=False):
     """
-    Alur Tahap 5 (revisi, tanpa StandardScaler):
+    Alur Tahap 3 (revisi, tanpa StandardScaler):
       1. Load training dataset dari Feature Store + leakage check.
       2. train_test_split stratified (80/20, random_state=42).
       3. StratifiedKFold k=10 di data development (80%).
@@ -95,7 +95,7 @@ def train_model(use_smote=False):
     variant = "with_smote" if use_smote else "without_smote"
 
     logger.info("=" * 60)
-    logger.info(f"TRAINING GAUSSIAN NAIVE BAYES ({variant.upper()}) - Tahap 5 Rev")
+    logger.info(f"TRAINING GAUSSIAN NAIVE BAYES ({variant.upper()}) - Tahap 3")
     logger.info("=" * 60)
 
     # =====================================================

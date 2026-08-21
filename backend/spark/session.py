@@ -104,25 +104,37 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
         return active_session
 
     # =====================================================
-    # Download dependency otomatis
+    # Dependency jar (jar lokal atau download otomatis via Ivy)
     #
-    # Hanya jar yang benar-benar dibutuhkan per mode yang diunduh:
-    #   - Iceberg runtime + Spark-Excel  : selalu
-    #   - PostgreSQL JDBC                : hanya jika serving ke Postgres aktif
-    #   - Hadoop-AWS + AWS SDK (MinIO)   : hanya untuk catalog non-lokal
+    # Jika SPARK_JARS_DIR berisi jar (di-bake ke image / bind mount),
+    # pakai spark.jars (tanpa resolusi Ivy saat runtime).
+    # Jika tidak ada, fallback ke spark.jars.packages (download otomatis).
     # =====================================================
 
-    packages = [
-        "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2",
-        "com.crealytics:spark-excel_2.12:3.5.1_0.20.4",
-    ]
+    jars_dir = os.getenv("SPARK_JARS_DIR", "/opt/airflow/jars")
 
-    if POSTGRES_ENABLED:
-        packages.append("org.postgresql:postgresql:42.7.4")
+    if os.path.isdir(jars_dir) and any(
+        f.endswith(".jar") for f in os.listdir(jars_dir)
+    ):
+        spark_jars = ",".join(
+            os.path.join(jars_dir, f)
+            for f in sorted(os.listdir(jars_dir))
+            if f.endswith(".jar")
+        )
+        packages = []
+    else:
+        spark_jars = None
+        packages = [
+            "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2",
+            "com.crealytics:spark-excel_2.12:3.5.1_0.20.4",
+        ]
 
-    if ICEBERG_CATALOG != "local":
-        packages.append("org.apache.hadoop:hadoop-aws:3.3.4")
-        packages.append("com.amazonaws:aws-java-sdk-bundle:1.12.261")
+        if POSTGRES_ENABLED:
+            packages.append("org.postgresql:postgresql:42.7.4")
+
+        if ICEBERG_CATALOG != "local":
+            packages.append("org.apache.hadoop:hadoop-aws:3.3.4")
+            packages.append("com.amazonaws:aws-java-sdk-bundle:1.12.261")
 
     # =====================================================
     # Membuat SparkSession baru
@@ -137,8 +149,12 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
         # Memory Configuration
         # =====================================================
 
-        .config("spark.driver.memory", "4g")
-        .config("spark.executor.memory", "4g")
+        .config(
+            "spark.driver.memory",
+            os.getenv("SPARK_DRIVER_MEMORY", "1g" if SPARK_MODE == "cluster" else "4g"),
+        )
+        .config("spark.executor.memory", os.getenv("SPARK_EXECUTOR_MEMORY", "1g"))
+        .config("spark.executor.cores", os.getenv("SPARK_EXECUTOR_CORES", "4"))
         .config("spark.driver.maxResultSize", "2g")
         .config("spark.local.dir", SPARK_LOCAL_DIR)
 
@@ -156,20 +172,34 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
         # =====================================================
 
         .config("spark.sql.shuffle.partitions", "8")
+    )
 
-        # =====================================================
-        # Dependency
-        # =====================================================
+    # =====================================================
+    # Dependency (jar lokal tanpa Ivy, atau packages Ivy)
+    #
+    # extraClassPath: driver & executor membaca jar dari filesystem
+    # masing-masing (folder yang di-mount identik), sehingga tidak ada
+    # lagi transfer ratusan MB via Spark jar-server setiap session.
+    # =====================================================
 
-        .config(
+    if spark_jars:
+        builder = (
+            builder
+            .config("spark.driver.extraClassPath", f"{jars_dir}/*")
+            .config("spark.executor.extraClassPath", f"{jars_dir}/*")
+        )
+    else:
+        builder = builder.config(
             "spark.jars.packages",
             ",".join(packages),
         )
 
-        # =====================================================
-        # Event Log
-        # =====================================================
+    # =====================================================
+    # Event Log
+    # =====================================================
 
+    builder = (
+        builder
         .config(
             "spark.eventLog.enabled",
             str(SPARK_EVENT_LOG).lower()

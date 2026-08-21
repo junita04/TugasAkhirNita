@@ -21,6 +21,7 @@ SILVER_SPECS = {
         "silver_mahasiswa",
         {
             "ID": "id_mahasiswa",
+            "ID_MHS": "id_mahasiswa",
             "Jenis Kelamin": "jenis_kelamin",
             "Tanggal Masuk": "tanggal_masuk",
             "Tanggal Keluar": "tanggal_keluar",
@@ -32,7 +33,7 @@ SILVER_SPECS = {
     ),
     "data_khs": (
         "silver_khs",
-        {"ID": "id_mahasiswa", "IP": "ip", "SKS": "sks"},
+        {"ID": "id_mahasiswa", "ID_MHS": "id_mahasiswa", "IP": "ip", "SKS": "sks"},
     ),
     "data_program_studi": (
         "silver_program_studi",

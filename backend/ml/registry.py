@@ -13,17 +13,18 @@ logger = get_logger(__name__)
 MODEL_NAME = "gaussian_nb_lulusan"
 
 # =====================================================
-# Revisi Tahap 5 (v2.0.0): tanpa StandardScaler.
-# Versi lama (v1.0.0) memakai StandardScaler dan TIDAK
-# ditimpa. Artifact revisi disimpan pada direktori baru.
+# Revisi Tahap 3 (v3.0.0): dataset baru
+# `(asli)req_data_rut (1).xlsx` (dataset revisi final).
+# Versi sebelumnya (v1.0.0, v2.0.0) TIDAK ditimpa.
+# Artifact revisi dataset baru disimpan di direktori baru.
 # =====================================================
-MODEL_VERSION = "v2.0.0"
+MODEL_VERSION = "v3.0.0"
 
-ARTIFACT_DIR = os.path.join(MODEL_DIR, "gaussian_nb_v2")
+ARTIFACT_DIR = os.path.join(MODEL_DIR, "gaussian_nb_v3")
 
 
 def _variant_dir(use_smote):
-    """Subdirektori artifact per varian (revisi Tahap 5)."""
+    """Subdirektori artifact per varian (revisi Tahap 3, dataset baru)."""
     sub = "with_smote" if use_smote else "without_smote"
     return os.path.join(ARTIFACT_DIR, sub)
 
@@ -86,7 +87,7 @@ def save_model(training_result):
         "use_smote": use_smote,
         "sampling": {"method": "SMOTE" if use_smote else None},
         "model_type": "GaussianNB",
-        "preprocessing": [],  # revisi Tahap 5: TANPA scaler
+        "preprocessing": [],  # revisi Tahap 3: TANPA scaler
         "has_scaler": False,
         "feature_names": training_result["feature_columns"],
         "target_name": training_result["target_column"],
@@ -124,7 +125,7 @@ def save_model(training_result):
 
 def load_model(use_smote=False):
     """
-    Memuat model artifact (revisi v2.0.0) dari Model Registry.
+    Memuat model artifact (revisi v3.0.0, dataset baru) dari Model Registry.
     """
 
     paths = _paths(use_smote)

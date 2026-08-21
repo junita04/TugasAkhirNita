@@ -41,6 +41,7 @@ def _current_snapshot_info(table_dir):
         "snapshot_id": current_id,
         "added_records": int(current["summary"].get("added-records", 0)),
         "schema_id": current.get("schema-id"),
+        "timestamp_ms": int(current.get("timestamp-ms", 0)),
     }
 
 
@@ -48,6 +49,14 @@ def load_active_parquet(table_dir):
     """
     Memuat seluruh baris data aktif (current snapshot) tabel Iceberg lokal
     menjadi pandas DataFrame.
+
+    Karena beberapa snapshot dapat menghasilkan banyak file parquet dengan
+    jumlah baris yang sama (mis. tabel ditulis ulang dengan jumlah baris
+    identik), file dipilih berdasarkan kecocokan dengan current snapshot:
+      1) jumlah baris file == added-records current snapshot, DAN
+      2) mtime file >= timestamp commit current snapshot.
+    Ini menghindari memilih file dari snapshot LAMA yang kebetulan punya
+    jumlah baris sama.
     """
     info = _current_snapshot_info(table_dir)
     data_dir = os.path.join(table_dir, "data")
@@ -61,31 +70,32 @@ def load_active_parquet(table_dir):
     if not candidates:
         raise FileNotFoundError(f"Tidak ada file data parquet aktif di {data_dir}")
 
-    # Pilih file yang jumlah barisnya cocok dengan added-records current snapshot.
-    best = None
+    # Pilih file yang (a) jumlah barisnya cocok dengan added-records current
+    # snapshot dan (b) ditulis paling akhir (mtime terbesar). Karena tabel
+    # ditulis ulang via createOrReplace, file milik snapshot AKTIF selalu
+    # yang paling baru di tulis.
+    matches = []
     for path in candidates:
         rows = pq.read_table(path).num_rows
         if rows == info["added_records"]:
-            best = path
-            break
-    if best is None:
-        # Fallback: gabungkan semua file aktif (pastikan totalnya cocok).
-        total = 0
-        combined = []
-        for path in candidates:
-            tbl = pq.read_table(path)
-            total += tbl.num_rows
-            combined.append(tbl)
-        if total != info["added_records"]:
-            raise RuntimeError(
-                f"Jumlah baris aktif ({total}) != added-records current snapshot "
-                f"({info['added_records']}) untuk {table_dir}"
-            )
-        import pyarrow as pa
+            matches.append((os.path.getmtime(path), path))
+    if matches:
+        matches.sort(key=lambda item: item[0], reverse=True)
+        return pq.read_table(matches[0][1]).to_pandas()
 
-        tbl = pa.concat_tables(combined)
-        return tbl.to_pandas()
-
+    # Fallback: gabungkan semua file aktif (pastikan totalnya cocok).
+    total = 0
+    combined = []
+    for path in candidates:
+        tbl = pq.read_table(path)
+        total += tbl.num_rows
+        combined.append(tbl)
+    if total != info["added_records"]:
+        raise RuntimeError(
+            f"Jumlah baris aktif ({total}) != added-records current snapshot "
+            f"({info['added_records']}) untuk {table_dir}"
+        )
     import pyarrow as pa
 
-    return pq.read_table(best).to_pandas()
+    tbl = pa.concat_tables(combined)
+    return tbl.to_pandas()

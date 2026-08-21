@@ -37,5 +37,14 @@ else
     echo "Original dataset not found at /seed-data/req_data_rut.xlsx"
 fi
 
+# Seed the NEW (final) dataset used by Tahap 4 (Airflow ETL) into the raw
+# zone. The filename contains parentheses and spaces, so quote it.
+if [[ -f "/seed-data/(asli)req_data_rut (1).xlsx" ]]; then
+    echo "Uploading NEW dataset to raw bucket..."
+    mc cp "/seed-data/(asli)req_data_rut (1).xlsx" "local/${MINIO_BUCKET_RAW}/(asli)req_data_rut (1).xlsx"
+else
+    echo "NEW dataset not found at /seed-data/(asli)req_data_rut (1).xlsx"
+fi
+
 echo "Buckets created:"
 mc ls local

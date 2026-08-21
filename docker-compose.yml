@@ -172,6 +172,8 @@ services:
       - "8081:8081"
     volumes:
       - spark-logs:/opt/bitnami/spark/logs
+      - ./data:/opt/airflow/data:ro
+      - ./docker/airflow/jars:/opt/airflow/jars:ro
     depends_on:
       spark-master:
         condition: service_healthy
@@ -276,10 +278,12 @@ services:
   airflow-scheduler:
     build:
       context: ./docker/airflow
-    mem_limit: 1g
+    mem_limit: 3g
+    memswap_limit: 4g
     profiles: [airflow]
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      MALLOC_ARENA_MAX: "2"
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER:-airflow}:${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}@postgres-airflow:5432/${POSTGRES_AIRFLOW_DB:-airflow}
       AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
       # Mode cluster: driver PySpark (DAG) di container terhubung ke Spark
@@ -294,10 +298,20 @@ services:
       S3_PATH_STYLE_ACCESS: "true"
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
       POSTGRES_ENABLED: "false"
+      SPARK_JARS_DIR: /opt/airflow/jars
+      SPARK_DRIVER_MEMORY: 1g
+      SPARK_EXECUTOR_MEMORY: 768m
+      SPARK_EXECUTOR_CORES: "2"
+      AIRFLOW__SCHEDULER__SCHEDULER_ZOMBIE_TASK_THRESHOLD: "1200"
+      AIRFLOW__SCHEDULER__LOCAL_TASK_JOB_HEARTBEAT_SEC: "0"
     volumes:
       - ./backend:/opt/airflow/backend:ro
       - ./scripts:/opt/airflow/scripts:ro
-      - ./data:/opt/airflow/data:ro
+      - ./data:/opt/airflow/data:rw
+      - ./models:/opt/airflow/models:rw
+      - ./logs:/opt/airflow/logs:rw
+      - ./results:/opt/airflow/results:rw
+      - ./docker/airflow/jars:/opt/airflow/jars:ro
       - ./docker/airflow/dags:/opt/airflow/dags:ro
     command: scheduler
     depends_on:
@@ -334,10 +348,20 @@ services:
       S3_PATH_STYLE_ACCESS: "true"
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
       POSTGRES_ENABLED: "false"
+      SPARK_JARS_DIR: /opt/airflow/jars
+      SPARK_DRIVER_MEMORY: 1g
+      SPARK_EXECUTOR_MEMORY: 1g
+      SPARK_EXECUTOR_CORES: "4"
+      AIRFLOW__SCHEDULER__SCHEDULER_ZOMBIE_TASK_THRESHOLD: "1200"
+      AIRFLOW__SCHEDULER__LOCAL_TASK_JOB_HEARTBEAT_SEC: "0"
     volumes:
       - ./backend:/opt/airflow/backend:ro
       - ./scripts:/opt/airflow/scripts:ro
-      - ./data:/opt/airflow/data:ro
+      - ./data:/opt/airflow/data:rw
+      - ./models:/opt/airflow/models:rw
+      - ./logs:/opt/airflow/logs:rw
+      - ./results:/opt/airflow/results:rw
+      - ./docker/airflow/jars:/opt/airflow/jars:ro
       - ./docker/airflow/dags:/opt/airflow/dags:ro
     ports:
       - "${AIRFLOW_WEBSERVER_PORT:-8085}:8080"

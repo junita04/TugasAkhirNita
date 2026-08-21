@@ -15,13 +15,13 @@ logger = get_logger(__name__)
 
 
 def _print_report(result, registry_info):
-    """Mencetak laporan akhir untuk satu varian Tahap 5."""
+    """Mencetak laporan akhir untuk satu varian Tahap 3 (dataset baru)."""
 
     variant = result["variant"]
 
     print()
     print("=" * 88)
-    print(f"LAPORAN TAHAP 5 - {variant.upper()}")
+    print(f"LAPORAN TAHAP 3 - {variant.upper()}")
     print("=" * 88)
 
     print("# A. DATASET")
@@ -198,7 +198,7 @@ def _run_variant(use_smote):
 
 def run_ml_pipeline():
     """
-    Orkestrator Tahap 5: melatih DUA varian GaussianNB.
+    Orkestrator Tahap 3: melatih DUA varian GaussianNB.
 
       (1) without_smote (baseline)
       (2) with_smote    (SMOTE di training fold guna menangani imbalance)
@@ -210,7 +210,7 @@ def run_ml_pipeline():
     """
 
     logger.info("=" * 60)
-    logger.info("MEMULAI ML PIPELINE (Tahap 5) - DUA VARIAN")
+    logger.info("MEMULAI ML PIPELINE (Tahap 3) - DUA VARIAN")
     logger.info("=" * 60)
 
     a = _run_variant(use_smote=False)
@@ -225,7 +225,7 @@ def run_ml_pipeline():
 
     print()
     print("=" * 88)
-    print("PERBANDINGAN VARIAN - TAHAP 5")
+    print("PERBANDINGAN VARIAN - TAHAP 3")
     print("=" * 88)
 
     headers = ["metric", "without_smote", "with_smote", "pemenang"]
