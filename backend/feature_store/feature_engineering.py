@@ -48,7 +48,7 @@ def join_gold_dataset():
     Grain hasil join: 1 baris = 1 mahasiswa.
     """
 
-    spark = get_spark("Feature Engineering Join")
+    spark = get_spark("TugasAkhirNita - Feature Engineering")
 
     logger.info("=" * 60)
     logger.info("JOIN GOLD STAR SCHEMA (dim_mahasiswa + fact_khs)")

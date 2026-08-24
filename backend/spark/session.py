@@ -16,7 +16,6 @@ from backend.config.settings import (
     S3_SECRET_KEY,
     S3_ENDPOINT,
     S3_PATH_STYLE_ACCESS,
-    HIVE_METASTORE_URI,
     POSTGRES_ENABLED,
 )
 
@@ -39,8 +38,8 @@ os.environ.setdefault("PYSPARK_DRIVER_PYTHON", sys.executable)
 def _iceberg_configs(spark_builder):
     """
     Mengonfigurasi Iceberg catalog berdasarkan ICEBERG_CATALOG:
-      - 'local'  : warehouse filesystem (jalankan dari mesin lokal)
-      - 'hive'   : Hive Metastore + warehouse di MinIO (cluster)
+      - 'local'  : Hadoop catalog, warehouse di filesystem lokal
+      - 'iceberg': Hadoop catalog, warehouse di MinIO (s3a://)
     """
 
     if ICEBERG_CATALOG != "local":
@@ -50,8 +49,7 @@ def _iceberg_configs(spark_builder):
                 f"spark.sql.catalog.{ICEBERG_CATALOG}",
                 "org.apache.iceberg.spark.SparkCatalog"
             )
-            .config(f"spark.sql.catalog.{ICEBERG_CATALOG}.type", "hive")
-            .config(f"spark.sql.catalog.{ICEBERG_CATALOG}.uri", HIVE_METASTORE_URI)
+            .config(f"spark.sql.catalog.{ICEBERG_CATALOG}.type", "hadoop")
             .config(
                 f"spark.sql.catalog.{ICEBERG_CATALOG}.warehouse",
                 ICEBERG_WAREHOUSE,

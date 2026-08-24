@@ -237,7 +237,7 @@ def process_khs(df, report):
 
 def process_table(table_name: str):
 
-    spark = get_spark("Silver Layer")
+    spark = get_spark("TugasAkhirNita - Silver Layer")
 
     if table_name not in SILVER_SPECS:
         logger.warning(f"Tabel bronze '{table_name}' tidak memiliki spesifikasi Silver. Skip.")
@@ -285,7 +285,7 @@ def process_table(table_name: str):
 
 
 def build_quality_report(reports):
-    spark = get_spark("Quality Report")
+    spark = get_spark("TugasAkhirNita - Quality Report")
 
     report = {
         "tables": reports,
@@ -385,7 +385,7 @@ def print_quality_report(report):
 
 def process_all_tables():
 
-    spark = get_spark("Silver Layer")
+    spark = get_spark("TugasAkhirNita - Silver Layer")
 
     reports = []
 

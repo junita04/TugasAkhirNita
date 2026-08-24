@@ -528,7 +528,7 @@ def run_inference(smoke_test=False, limit=None):
     logger.info("TAHAP 6 — INFERENCE / PREDICTION (VERSI PARQUET)")
     logger.info("=" * 60)
 
-    spark = get_spark("Inference Prediction (2 Variant, Parquet)")
+    spark = get_spark("TugasAkhirNita - Inference")
 
     # 1. Baca inference dataset
     pdf = load_inference_dataset(spark)

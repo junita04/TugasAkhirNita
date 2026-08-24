@@ -12,3 +12,5 @@ spark-3.5.2-bin-hadoop3.tgz
 spark-tmp/
 DockerDesktopData/
 _recovery_cleanup/
+
+docker/airflow/jars/*.jar

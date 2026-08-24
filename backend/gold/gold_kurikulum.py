@@ -7,7 +7,7 @@ logger = get_logger(__name__)
 
 def process_gold_kurikulum():
 
-    spark = get_spark("Gold Kurikulum")
+    spark = get_spark("TugasAkhirNita - Gold Kurikulum")
 
     logger.info("=" * 60)
     logger.info("Membuat Gold Kurikulum")

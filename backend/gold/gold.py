@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 
 def _validate_star_schema():
 
-    spark = get_spark("Gold Validation")
+    spark = get_spark("TugasAkhirNita - Gold Validation")
 
     dim = spark.table(f"{ICEBERG_NAMESPACE}.gold.dim_mahasiswa")
     fact = spark.table(f"{ICEBERG_NAMESPACE}.gold.fact_khs")

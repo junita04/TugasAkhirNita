@@ -48,7 +48,10 @@ MASTER = os.getenv(
 SPARK_EVENT_LOG = os.getenv("SPARK_EVENT_LOG", "true").lower() == "true" # mencatat history
 
 SPARK_EVENT_DIR.mkdir(parents=True, exist_ok=True)
-SPARK_EVENT_LOG_DIR = SPARK_EVENT_DIR.as_uri() # hasil log akan disimpan di folder spark-events
+if SPARK_MODE == "cluster":
+    SPARK_EVENT_LOG_DIR = "file:///spark-events"
+else:
+    SPARK_EVENT_LOG_DIR = SPARK_EVENT_DIR.as_uri() # hasil log akan disimpan di folder spark-events
 
 SPARK_HISTORY_UI = os.getenv("SPARK_HISTORY_UI", "http://localhost:18080") # localhost history spark
 

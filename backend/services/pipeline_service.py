@@ -37,7 +37,7 @@ def run_pipeline(file_path: Path):
         from backend.spark.session import get_spark
 
         logger.info("PostgreSQL serving aktif: publish tabel Gold...")
-        publish_gold_tables(get_spark("Gold PostgreSQL Publish"))
+        publish_gold_tables(get_spark("TugasAkhirNita - Gold PostgreSQL Publish"))
     else:
         logger.info("POSTGRES_ENABLED=false -> publish ke PostgreSQL dilewati.")
 
@@ -50,7 +50,7 @@ def run_pipeline(file_path: Path):
 
     from backend.spark.session import get_spark
 
-    spark = get_spark("Pipeline")
+    spark = get_spark("TugasAkhirNita - Pipeline")
     spark.stop()
 
     logger.info("=" * 60)

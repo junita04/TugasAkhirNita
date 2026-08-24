@@ -231,7 +231,7 @@ def run_iceberg_output():
     logger.info("TAHAP 6 — ICEBERG OUTPUT (PARQUET -> ICEBERG)")
     logger.info("=" * 60)
 
-    spark = get_spark("Inference Iceberg Output")
+    spark = get_spark("TugasAkhirNita - Inference Iceberg Output")
 
     per_target = {}
 

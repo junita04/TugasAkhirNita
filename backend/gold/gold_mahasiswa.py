@@ -23,7 +23,7 @@ DIM_MAHASISWA_COLUMNS = [
 
 def process_gold_dim_mahasiswa():
 
-    spark = get_spark("Gold Dim Mahasiswa")
+    spark = get_spark("TugasAkhirNita - Gold Dim Mahasiswa")
 
     logger.info("=" * 60)
     logger.info("MEMBUAT GOLD DIM_MAHASISWA (STAR SCHEMA)")

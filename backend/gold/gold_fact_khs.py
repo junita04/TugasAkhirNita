@@ -12,7 +12,7 @@ FACT_KHS_COLUMNS = ["id_mahasiswa", "ip", "sks"]
 
 def process_gold_fact_khs():
 
-    spark = get_spark("Gold Fact KHS")
+    spark = get_spark("TugasAkhirNita - Gold Fact KHS")
 
     logger.info("=" * 60)
     logger.info("MEMBUAT GOLD FACT_KHS (STAR SCHEMA)")

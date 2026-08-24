@@ -7,7 +7,7 @@ logger = get_logger(__name__)
 
 def process_gold_program_studi():
 
-    spark = get_spark("Gold Prodi")
+    spark = get_spark("TugasAkhirNita - Gold Prodi")
 
     logger.info("=" * 60)
     logger.info("Membuat Gold Program Studi")

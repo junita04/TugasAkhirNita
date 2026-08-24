@@ -76,7 +76,7 @@ def predict():
     pemetaan indeks fitur konsisten dengan saat training.
     """
 
-    spark = get_spark("Prediction")
+    spark = get_spark("TugasAkhirNita - Prediction")
 
     logger.info("=" * 60)
     logger.info("PREDICT")

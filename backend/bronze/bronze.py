@@ -41,7 +41,7 @@ def load_all_sheets_to_bronze(file_path: Path):
     logger.info("MEMULAI BRONZE LAYER (RAW)")
     logger.info("=" * 60)
 
-    spark = get_spark("Bronze Layer")
+    spark = get_spark("TugasAkhirNita - Bronze Layer")
 
     excel = pd.ExcelFile(file_path)
 

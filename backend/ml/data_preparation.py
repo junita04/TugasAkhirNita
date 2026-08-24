@@ -40,7 +40,7 @@ def load_training_dataset():
     wajib, tidak ada duplicate id (grain 1 baris = 1 mahasiswa LULUS).
     """
 
-    spark = get_spark("ML Data Preparation")
+    spark = get_spark("TugasAkhirNita - ML Data Preparation")
 
     logger.info("=" * 60)
     logger.info("MEMUAT TRAINING DATASET (FEATURE STORE)")
