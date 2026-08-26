@@ -219,7 +219,6 @@ services:
       - ./docker/trino/node.properties:/etc/trino/node.properties:ro
       - ./docker/trino/jvm.config:/etc/trino/jvm.config:ro
       - ./docker/trino/catalog:/etc/trino/catalog:ro
-      - ./docker/trino/hadoop-aws-3.3.5.jar:/usr/lib/trino/plugin/iceberg/hdfs/hadoop-aws-3.3.5.jar:ro
       - ./iceberg:/data/iceberg:ro
     depends_on:
       hive-metastore:
@@ -282,14 +281,11 @@ services:
   airflow-scheduler:
     build:
       context: ./docker/airflow
-    mem_limit: 4g
-    memswap_limit: 5g
+    mem_limit: 3g
+    memswap_limit: 4g
     profiles: [airflow]
-    dns:
-      - 8.8.8.8
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__PARALLELISM: "2"
       MALLOC_ARENA_MAX: "2"
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER:-airflow}:${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}@postgres-airflow:5432/${POSTGRES_AIRFLOW_DB:-airflow}
       AIRFLOW__WEBSERVER__SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-this-secret-key}
@@ -320,7 +316,6 @@ services:
       - ./docker/airflow/jars:/opt/airflow/jars:ro
       - ./docker/airflow/dags:/opt/airflow/dags:ro
       - ./iceberg:/data/iceberg:ro
-      - D:/TA/TugasAkhirNita/spark-events:/spark-events
     command: scheduler
     depends_on:
       airflow-init:

@@ -1,0 +1,99 @@
+{
+  "format-version" : 2,
+  "table-uuid" : "c0eec36a-11ae-406b-8c22-c5a2343152b6",
+  "location" : "file:///D:/TA/TugasAkhirNita/iceberg/silver/data_referensi_mahasiswa",
+  "last-sequence-number" : 1,
+  "last-updated-ms" : 1786425772966,
+  "last-column-id" : 7,
+  "current-schema-id" : 0,
+  "schemas" : [ {
+    "type" : "struct",
+    "schema-id" : 0,
+    "fields" : [ {
+      "id" : 1,
+      "name" : "jenis_kelamin",
+      "required" : false,
+      "type" : "string"
+    }, {
+      "id" : 2,
+      "name" : "tanggal_masuk",
+      "required" : false,
+      "type" : "string"
+    }, {
+      "id" : 3,
+      "name" : "tanggal_keluar",
+      "required" : false,
+      "type" : "string"
+    }, {
+      "id" : 4,
+      "name" : "ipk",
+      "required" : false,
+      "type" : "string"
+    }, {
+      "id" : 5,
+      "name" : "total_sks",
+      "required" : false,
+      "type" : "string"
+    }, {
+      "id" : 6,
+      "name" : "jumlah_mk",
+      "required" : false,
+      "type" : "string"
+    }, {
+      "id" : 7,
+      "name" : "status_mahasiswa",
+      "required" : false,
+      "type" : "string"
+    } ]
+  } ],
+  "default-spec-id" : 0,
+  "partition-specs" : [ {
+    "spec-id" : 0,
+    "fields" : [ ]
+  } ],
+  "last-partition-id" : 999,
+  "default-sort-order-id" : 0,
+  "sort-orders" : [ {
+    "order-id" : 0,
+    "fields" : [ ]
+  } ],
+  "properties" : {
+    "owner" : "SD RISET 002",
+    "write.parquet.compression-codec" : "zstd"
+  },
+  "current-snapshot-id" : 5908813751930038862,
+  "refs" : {
+    "main" : {
+      "snapshot-id" : 5908813751930038862,
+      "type" : "branch"
+    }
+  },
+  "snapshots" : [ {
+    "sequence-number" : 1,
+    "snapshot-id" : 5908813751930038862,
+    "timestamp-ms" : 1786425772966,
+    "summary" : {
+      "operation" : "append",
+      "spark.app.id" : "local-1786425753805",
+      "added-data-files" : "6",
+      "added-records" : "32738",
+      "added-files-size" : "125163",
+      "changed-partition-count" : "1",
+      "total-records" : "32738",
+      "total-files-size" : "125163",
+      "total-data-files" : "6",
+      "total-delete-files" : "0",
+      "total-position-deletes" : "0",
+      "total-equality-deletes" : "0"
+    },
+    "manifest-list" : "file:/D:/TA/TugasAkhirNita/iceberg/silver/data_referensi_mahasiswa/metadata/snap-5908813751930038862-1-4428f920-f2bb-43a6-87be-affaa7a84671.avro",
+    "schema-id" : 0
+  } ],
+  "statistics" : [ ],
+  "partition-statistics" : [ ],
+  "snapshot-log" : [ {
+    "timestamp-ms" : 1786425772966,
+    "snapshot-id" : 5908813751930038862
+  } ],
+  "metadata-log" : [ ]
+}

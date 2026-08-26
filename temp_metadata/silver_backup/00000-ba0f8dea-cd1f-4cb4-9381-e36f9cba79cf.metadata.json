@@ -1,0 +1,36 @@
+{
+  "format-version" : 2,
+  "table-uuid" : "454900c6-f92a-4a4c-aff1-f41b5e3dd35e",
+  "location" : "s3a://warehouse/iceberg/silver/data_referensi_mahasiswa",
+  "last-sequence-number" : 0,
+  "last-updated-ms" : 1787558449261,
+  "last-column-id" : 0,
+  "current-schema-id" : 0,
+  "schemas" : [ {
+    "type" : "struct",
+    "schema-id" : 0,
+    "fields" : [ ]
+  } ],
+  "default-spec-id" : 0,
+  "partition-specs" : [ {
+    "spec-id" : 0,
+    "fields" : [ ]
+  } ],
+  "last-partition-id" : 999,
+  "default-sort-order-id" : 0,
+  "sort-orders" : [ {
+    "order-id" : 0,
+    "fields" : [ ]
+  } ],
+  "properties" : {
+    "owner" : "sparkdl",
+    "write.parquet.compression-codec" : "zstd"
+  },
+  "current-snapshot-id" : -1,
+  "refs" : { },
+  "snapshots" : [ ],
+  "statistics" : [ ],
+  "partition-statistics" : [ ],
+  "snapshot-log" : [ ],
+  "metadata-log" : [ ]
+}
