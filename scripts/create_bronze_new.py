@@ -2,16 +2,17 @@
 Create new Bronze table from new Excel dataset.
 - Reads Excel file
 - Normalizes column names to snake_case
-- Writes to Iceberg at s3://warehouse/iceberg/bronze/data_referensi_mahasiswa
-- Does NOT modify data values, only column names
+- Converts pandas NaN to Python None (SQL NULL in Spark)
+- Writes to Iceberg at s3a://warehouse/iceberg/bronze/data_referensi_mahasiswa
+- Does NOT modify data values, only column names and missing value representation
 """
 import sys
 import os
 
 sys.path.insert(0, "/opt/airflow")
-os.environ["SPARK_EVENT_LOG"] = "false"
 
 from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 import re
 
 def normalize_column_name(column_name: str) -> str:
@@ -51,7 +52,7 @@ print("=" * 60)
 
 spark = (
     SparkSession.builder
-    .appName("CreateBronzeFromNewExcel")
+    .appName("TA_Bronze_Create_Data_Referensi_Mahasiswa")
     .master("local[*]")
     .config("spark.driver.extraClassPath", "/opt/airflow/jars/*")
     .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000")
@@ -73,10 +74,14 @@ spark = (
     .config("spark.sql.catalog.iceberg.uri", "thrift://hive-metastore:9083")
     .config("spark.sql.catalog.iceberg.warehouse", "s3a://warehouse/iceberg")
     .config("spark.driver.memory", "2g")
+    .config("spark.eventLog.enabled", "true")
+    .config("spark.eventLog.dir", "file:///spark-events")
     .getOrCreate()
 )
 
 print("Spark session created")
+print(f"Application ID: {spark.sparkContext.applicationId}")
+print(f"Application Name: {spark.sparkContext.appName}")
 
 # ============================================================
 # Read Excel file
@@ -100,7 +105,35 @@ print(f"Normalized columns: {new_columns}")
 
 pdf.columns = new_columns
 
+# ============================================================
+# CRITICAL FIX: Convert pandas NaN -> Python None -> Spark SQL NULL
+# ============================================================
+print("=" * 60)
+print("CONVERTING PANDAS NaN TO PYTHON NONE")
+print("=" * 60)
+
+# Count NaN before conversion
+nan_before = pdf.isna().sum()
+print(f"NaN counts before conversion:")
+for col in pdf.columns:
+    print(f"  {col}: {nan_before[col]}")
+
+# Convert all NaN/NaT to None (Python None -> Spark SQL NULL)
+pdf = pdf.where(pd.notna(pdf), None)
+
+# Count NaN after conversion
+nan_after = pdf.isna().sum()
+print(f"NaN counts after conversion:")
+for col in pdf.columns:
+    print(f"  {col}: {nan_after[col]}")
+
+# ============================================================
 # Convert to Spark DataFrame
+# ============================================================
+print("=" * 60)
+print("CONVERTING TO SPARK DATAFRAME")
+print("=" * 60)
+
 df = spark.createDataFrame(pdf)
 print(f"Spark DataFrame columns: {df.columns}")
 print(f"Spark DataFrame count: {df.count()}")
@@ -136,23 +169,57 @@ print("=" * 60)
 print("VALIDATION")
 print("=" * 60)
 
-# Count
-count = spark.table("iceberg.bronze.data_referensi_mahasiswa").count()
-print(f"Row count: {count}")
+df_val = spark.table("iceberg.bronze.data_referensi_mahasiswa")
 
-# Null check on tanggal_masuk
-null_count = spark.table("iceberg.bronze.data_referensi_mahasiswa").filter("tanggal_masuk IS NULL").count()
-print(f"NULL tanggal_masuk: {null_count}")
+# 1. Row count
+count = df_val.count()
+print(f"1. Row count: {count}")
 
-# Duplicate check on id_mhs
-dup_count = spark.table("iceberg.bronze.data_referensi_mahasiswa").groupBy("id_mhs").count().filter("count > 1").count()
-print(f"Duplicate id_mhs: {dup_count}")
+# 2. Column count
+col_count = len(df_val.columns)
+print(f"2. Column count: {col_count}")
+print(f"   Columns: {df_val.columns}")
 
-# Show schema
-spark.table("iceberg.bronze.data_referensi_mahasiswa").printSchema()
+# 3. NULL tanggal_masuk
+null_tanggal_masuk = df_val.filter(F.col("tanggal_masuk").isNull()).count()
+print(f"3. NULL tanggal_masuk: {null_tanggal_masuk}")
 
-# Show 5 rows
-spark.table("iceberg.bronze.data_referensi_mahasiswa").show(5, truncate=False)
+# 4. String "NaN" on tanggal_masuk
+nan_str_tanggal_masuk = df_val.filter(
+    F.lower(F.trim(F.col("tanggal_masuk"))) == "nan"
+).count()
+print(f"4. String 'NaN' tanggal_masuk: {nan_str_tanggal_masuk}")
+
+# 5. String "NaN" on ALL columns
+print("5. String 'NaN' check on ALL columns:")
+for col_name in df_val.columns:
+    nan_cnt = df_val.filter(
+        F.lower(F.trim(F.col(col_name))) == "nan"
+    ).count()
+    if nan_cnt > 0:
+        print(f"   WARNING: {col_name} has {nan_cnt} 'NaN' strings")
+
+# 6. Duplicate id_mhs
+dup_count = df_val.groupBy("id_mhs").count().filter("count > 1").count()
+print(f"6. Duplicate id_mhs: {dup_count}")
+
+# 7. Status mahasiswa distribution
+print("7. Status mahasiswa distribution:")
+df_val.groupBy("status_mahasiswa").count().orderBy(F.col("count").desc()).show()
+
+# 8. Schema
+print("8. Schema:")
+df_val.printSchema()
+
+# 9. Sample data
+print("9. Sample data (10 rows):")
+df_val.show(10, truncate=False)
+
+# 10. Table location
+print("10. Table location:")
+location = spark.sql("SHOW CREATE TABLE iceberg.bronze.data_referensi_mahasiswa").collect()
+for row in location:
+    print(f"    {row[0]}")
 
 spark.stop()
 print("=" * 60)

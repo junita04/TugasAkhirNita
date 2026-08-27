@@ -5,11 +5,14 @@ from urllib.parse import quote_plus
 TRINO_DATABASE_NAME = "Academic Trino"
 TRINO_CATALOG = "iceberg"
 TRINO_SCHEMA = "gold"
-TRINO_TABLES = ("gold_mahasiswa", "gold_program_studi", "gold_kurikulum")
-
-# Tabel hasil prediksi (di-scan setelah pipeline berjalan).
-PREDICTION_SCHEMA = "feature_store"
-PREDICTION_TABLE = "prediction_result"
+TRINO_TABLES = (
+    "data_referensi_mahasiswa",
+    "model_metrics",
+    "model_predictions",
+    "prediction_by_angkatan",
+    "confusion_matrix",
+    "classification_report",
+)
 
 
 def trino_uri() -> str:
@@ -21,6 +24,4 @@ def trino_uri() -> str:
 
 
 def dataset_specs() -> list[tuple[str, str]]:
-    return [(TRINO_SCHEMA, table_name) for table_name in TRINO_TABLES] + [
-        (PREDICTION_SCHEMA, PREDICTION_TABLE)
-    ]
+    return [(TRINO_SCHEMA, table_name) for table_name in TRINO_TABLES]

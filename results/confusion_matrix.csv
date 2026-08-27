@@ -1,0 +1,5 @@
+actual,predicted,count
+Tepat Waktu,Tepat Waktu,410
+Tepat Waktu,Terlambat,221
+Terlambat,Tepat Waktu,469
+Terlambat,Terlambat,1537

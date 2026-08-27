@@ -1,0 +1,4 @@
+class,precision,recall,f1_score,support
+Tepat Waktu,0.47,0.65,0.54,631
+Terlambat,0.87,0.77,0.82,2006
+weighted_avg,0.78,0.74,0.75,2637
