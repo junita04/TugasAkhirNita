@@ -149,11 +149,11 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
 
         .config(
             "spark.driver.memory",
-            os.getenv("SPARK_DRIVER_MEMORY", "1g" if SPARK_MODE == "cluster" else "4g"),
+            os.getenv("SPARK_DRIVER_MEMORY", "768m" if SPARK_MODE == "cluster" else "2g"),
         )
-        .config("spark.executor.memory", os.getenv("SPARK_EXECUTOR_MEMORY", "1g"))
-        .config("spark.executor.cores", os.getenv("SPARK_EXECUTOR_CORES", "4"))
-        .config("spark.driver.maxResultSize", "2g")
+        .config("spark.executor.memory", os.getenv("SPARK_EXECUTOR_MEMORY", "512m"))
+        .config("spark.executor.cores", os.getenv("SPARK_EXECUTOR_CORES", "1"))
+        .config("spark.driver.maxResultSize", "1g")
         .config("spark.local.dir", SPARK_LOCAL_DIR)
 
         # =====================================================
@@ -170,6 +170,8 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
         # =====================================================
 
         .config("spark.sql.shuffle.partitions", "8")
+        .config("spark.executor.instances", "2")
+        .config("spark.dynamicAllocation.enabled", "false")
     )
 
     # =====================================================

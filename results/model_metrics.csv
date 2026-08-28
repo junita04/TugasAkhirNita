@@ -1,2 +1,0 @@
-model,cv_mean_accuracy,cv_std_accuracy,cv_mean_f1,cv_std_f1,test_accuracy,test_precision,test_recall,test_f1,training_samples,test_samples,inference_samples,features_count,pipeline_version,training_date
-GaussianNB,0.7439502727154544,0.011587594960355439,0.7570081247320404,0.010847861250127648,0.7383390216154722,0.7766957746223667,0.7383390216154722,0.7512063384783562,13181,2637,14662,8,v2,2026-08-27T04:26:26.237910

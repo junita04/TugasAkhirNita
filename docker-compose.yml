@@ -44,6 +44,7 @@ services:
   # ============================================================
   minio:
     image: minio/minio:RELEASE.2024-05-10T01-41-38Z
+    mem_limit: 512m
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -108,7 +109,8 @@ services:
   hive-metastore:
     build:
       context: ./docker/hive-metastore
-    mem_limit: 2g
+    mem_limit: 1g
+    memswap_limit: 1280m
     environment:
       IS_RESUME: "true"
       # Kredensial dipakai oleh hive-site.xml (${env:...}). Default mengikuti
@@ -144,6 +146,7 @@ services:
     profiles: [spark-docker]
     build:
       context: ./docker/spark
+    mem_limit: 512m
     command: /opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.master.Master
     environment:
       SPARK_MASTER_HOST: spark-master
@@ -165,10 +168,14 @@ services:
     profiles: [spark-docker]
     build:
       context: ./docker/spark
+    mem_limit: 2g
+    memswap_limit: 2g
     command: /opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
       SPARK_MODE: worker
       SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 1536m
+      SPARK_WORKER_CORES: 2
     ports:
       - "8081:8081"
     volumes:
@@ -181,6 +188,7 @@ services:
       spark-master:
         condition: service_healthy
     networks: [lakehouse]
+    restart: unless-stopped
 
   spark-history:
     profiles: [spark-docker]
@@ -282,9 +290,10 @@ services:
   airflow-scheduler:
     build:
       context: ./docker/airflow
-    mem_limit: 4g
-    memswap_limit: 5g
+    mem_limit: 2g
+    memswap_limit: 2560m
     profiles: [airflow]
+    restart: unless-stopped
     dns:
       - 8.8.8.8
     environment:
@@ -305,9 +314,9 @@ services:
       S3_PATH_STYLE_ACCESS: "true"
       POSTGRES_ENABLED: "false"
       SPARK_JARS_DIR: /opt/airflow/jars
-      SPARK_DRIVER_MEMORY: 1g
-      SPARK_EXECUTOR_MEMORY: 768m
-      SPARK_EXECUTOR_CORES: "2"
+      SPARK_DRIVER_MEMORY: 768m
+      SPARK_EXECUTOR_MEMORY: 512m
+      SPARK_EXECUTOR_CORES: "1"
       AIRFLOW__SCHEDULER__SCHEDULER_ZOMBIE_TASK_THRESHOLD: "1200"
       AIRFLOW__SCHEDULER__LOCAL_TASK_JOB_HEARTBEAT_SEC: "0"
     volumes:
@@ -338,6 +347,7 @@ services:
       context: ./docker/airflow
     mem_limit: 1g
     profiles: [airflow]
+    restart: unless-stopped
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER:-airflow}:${POSTGRES_AIRFLOW_PASSWORD:-airflow-password}@postgres-airflow:5432/${POSTGRES_AIRFLOW_DB:-airflow}
@@ -356,9 +366,9 @@ services:
       S3_PATH_STYLE_ACCESS: "true"
       POSTGRES_ENABLED: "false"
       SPARK_JARS_DIR: /opt/airflow/jars
-      SPARK_DRIVER_MEMORY: 1g
-      SPARK_EXECUTOR_MEMORY: 1g
-      SPARK_EXECUTOR_CORES: "4"
+      SPARK_DRIVER_MEMORY: 512m
+      SPARK_EXECUTOR_MEMORY: 512m
+      SPARK_EXECUTOR_CORES: "1"
       AIRFLOW__SCHEDULER__SCHEDULER_ZOMBIE_TASK_THRESHOLD: "1200"
       AIRFLOW__SCHEDULER__LOCAL_TASK_JOB_HEARTBEAT_SEC: "0"
     volumes:
@@ -377,6 +387,12 @@ services:
       airflow-init:
         condition: service_completed_successfully
     networks: [lakehouse]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   # ============================================================
   # 10. Superset (via Trino)
@@ -418,8 +434,9 @@ services:
   superset:
     build:
       context: ./docker/superset
-    mem_limit: 2g
+    mem_limit: 1g
     profiles: [superset]
+    restart: unless-stopped
     env_file:
       - path: .env
         required: false

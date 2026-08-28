@@ -1,0 +1,8 @@
+              precision    recall  f1-score   support
+
+ Tepat Waktu     0.5185    0.4897    0.5037       631
+   Terlambat     0.8422    0.8569    0.8495      2006
+
+    accuracy                         0.7691      2637
+   macro avg     0.6803    0.6733    0.6766      2637
+weighted avg     0.7648    0.7691    0.7668      2637
