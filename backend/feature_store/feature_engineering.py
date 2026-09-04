@@ -1,76 +1,74 @@
 from pyspark.sql import functions as F
 
 from backend.spark.session import get_spark
-from backend.config.settings import (
-    ICEBERG_NAMESPACE,
-    GRADUATION_LIMIT_DAYS,
-)
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 # ============================================================
-# Feature Store baru (Tahap 4)
+# Feature Store (8 fitur, sesuai baseline notebook)
 #
-# Sumber : Gold Star Schema (dim_mahasiswa + fact_khs)
-# Fitur X: ip, sks, angkatan, jumlah_mk
-# Label  : status_kelulusan (hanya untuk mahasiswa LULUS)
+# Sumber : Gold dim_mahasiswa (sudah wide: termasuk ip, sks dari fact_khs)
+# Fitur X: jk_enc, angkatan, ip, ipk, total_sks, jumlah_mk,
+#          sks_seharusnya, selisih_sks
+# Label  : label (0=Tepat Waktu, 1=Terlambat)
 # ============================================================
 
-FEATURE_X = ["ip", "sks", "angkatan", "jumlah_mk"]
+FEATURE_X = [
+    "jk_enc",
+    "angkatan",
+    "ip",
+    "ipk",
+    "total_sks",
+    "jumlah_mk",
+    "sks_seharusnya",
+    "selisih_sks",
+]
 
 # Fitur yang DILARANG masuk ke X (data leakage).
+# Catatan: jenis_kelamin BUKAN feature — digunakan untuk membuat jk_enc.
+# ipk, total_sks ADALAH feature (bukan forbidden).
 FORBIDDEN_FEATURES = [
     "jenis_kelamin",
     "tanggal_masuk",
     "tanggal_keluar",
-    "ipk",
-    "total_sks",
     "status_mahasiswa",
     "lama_studi",
     "status_kelulusan",
-    "estimasi_semester",
-    "persentase_sks",
+    "label",
 ]
 
 DIM_TABLE = f"{ICEBERG_NAMESPACE}.gold.dim_mahasiswa"
-FACT_TABLE = f"{ICEBERG_NAMESPACE}.gold.fact_khs"
 
 
 def join_gold_dataset():
     """
-    Membaca Gold Star Schema dan melakukan LEFT JOIN:
+    Membaca Gold dim_mahasiswa (wide schema, sudah termasuk ip + sks).
 
-        gold.dim_mahasiswa
-        LEFT JOIN gold.fact_khs
-        ON id_mahasiswa
-
-    Grain hasil join: 1 baris = 1 mahasiswa.
+    Grain: 1 baris = 1 mahasiswa.
+    Tidak perlu JOIN lagi karena dim_mahasiswa sudah memiliki semua kolom.
     """
 
     spark = get_spark("TugasAkhirNita - Feature Engineering")
 
     logger.info("=" * 60)
-    logger.info("JOIN GOLD STAR SCHEMA (dim_mahasiswa + fact_khs)")
+    logger.info("MEMBACA GOLD DIM_MAHASISWA (WIDE SCHEMA)")
     logger.info("=" * 60)
 
-    dim = spark.table(DIM_TABLE)
-    fact = spark.table(FACT_TABLE)
+    df = spark.table(DIM_TABLE)
 
-    joined = dim.join(fact, on="id_mahasiswa", how="left")
-
-    total = joined.count()
-    distinct = joined.select("id_mahasiswa").distinct().count()
+    total = df.count()
+    distinct = df.select("id_mahasiswa").distinct().count()
     duplicate = total - distinct
-    row_multiplication = duplicate
 
-    logger.info(f"Join total rows : {total}")
-    logger.info(f"Distinct id     : {distinct}")
-    logger.info(f"Duplicate id    : {duplicate}")
+    logger.info(f"Total rows  : {total}")
+    logger.info(f"Distinct id : {distinct}")
+    logger.info(f"Duplicate id: {duplicate}")
 
-    if row_multiplication != 0:
+    if duplicate != 0:
         raise RuntimeError(
-            f"Row multiplication terdeteksi pada JOIN Gold ({row_multiplication}). "
+            f"Duplicate id_mahasiswa terdeteksi pada Gold ({duplicate}). "
             "Hentikan proses Feature Store."
         )
 
@@ -78,25 +76,34 @@ def join_gold_dataset():
         "join_total": total,
         "join_distinct": distinct,
         "join_duplicate": duplicate,
-        "row_multiplication": row_multiplication,
+        "row_multiplication": duplicate,
     }
 
-    return joined, report
+    return df, report
 
 
-def derive_features(joined):
+def derive_features(df):
     """
-    Turunkan fitur baru dari kolom dasar Gold:
-      - angkatan = year(tanggal_masuk)   (hanya dari tanggal MASUK)
-      - lama_studi = tanggal_keluar - tanggal_masuk (dalam HARI)
-        Hanya dipakai untuk membentuk label training; bukan fitur X.
-    """
+    Turunkan fitur tambahan dari kolom Gold:
+      - jk_enc: encoding jenis_kelamin (P/PEREMPUAN=0, L/LAKI-LAKI=1)
 
-    df = joined.withColumn("angkatan", F.year(F.col("tanggal_masuk")))
+    Kolom lain (angkatan, semester, sks_seharusnya, selisih_sks, lama_studi,
+    status_kelulusan, label) sudah ada di Gold dim_mahasiswa.
+    """
 
     df = df.withColumn(
-        "lama_studi",
-        F.datediff(F.col("tanggal_keluar"), F.col("tanggal_masuk")),
+        "jk_enc",
+        F.when(
+            F.upper(F.trim(F.col("jenis_kelamin"))).isin(
+                "P", "PEREMPUAN", "PEREMPUAN "
+            ),
+            F.lit(0),
+        ).when(
+            F.upper(F.trim(F.col("jenis_kelamin"))).isin(
+                "L", "LAKI-LAKI", "LAKI LAKI", "LAKI"
+            ),
+            F.lit(1),
+        ),
     )
 
     return df
@@ -107,7 +114,7 @@ def check_leakage(df, label_columns=()):
     Pemeriksaan data leakage otomatis.
 
     Syarat:
-      - Fitur X tepat = FEATURE_X (ip, sks, angkatan, jumlah_mk).
+      - Fitur X tepat = FEATURE_X (8 fitur).
       - Tidak ada fitur terlarang di dalam dataset (selain id/label).
 
     Mengembalikan (forbidden_detected, extra_columns).

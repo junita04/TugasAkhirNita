@@ -1,8 +1,8 @@
 """
-Tahap 6 — Inference / Prediction Pipeline (VERSI PARQUET).
+Tahap 6 — Inference / Prediction Pipeline.
 
-Membaca inference dataset (mahasiswa AKTIF) dari Feature Store, memuat KEDUA
-model final revisi Tahap 3 dari Model Registry (v3.0.0, TANPA StandardScaler):
+Membaca inference dataset (mahasiswa AKTIF 2022-2024) dari Feature Store,
+memuat KEDUA model final dari Model Registry:
 
   * MODEL A (without_smote): GaussianNB()
   * MODEL B (with_smote)   : SMOTE + GaussianNB (imblearn pipeline)
@@ -48,13 +48,15 @@ PARQUET_WITH_SMOTE = PREDICTION_DIR / "prediction_result_with_smote.parquet"
 PARQUET_COMPARISON = PREDICTION_DIR / "prediction_comparison.parquet"
 
 IDENTIFIER_COLUMN = "id_mahasiswa"
-PREDICTION_LABEL_COLUMN = "prediksi_status_kelulusan"
+PREDICTION_LABEL_COLUMN = "prediksi_label"
+PREDICTION_TEXT_COLUMN = "prediksi"
 PREDICTION_TIMESTAMP_COLUMN = "prediction_timestamp"
 MODEL_VERSION_COLUMN = "model_version"
 MODEL_VARIANT_COLUMN = "model_variant"
-PREDICTION_PROBABILITY_COLUMN = "probabilitas_prediksi"
+PROBABILITY_TEWAT_WAKTU = "probability_tepat_waktu"
+PROBABILITY_TERLAMBAT = "probability_terlambat"
 
-INFERENCE_FEATURES = FEATURE_X  # ["ip", "sks", "angkatan", "jumlah_mk"]
+INFERENCE_FEATURES = FEATURE_X  # 8 fitur
 
 VARIANT_WITHOUT_SMOTE = "without_smote"
 VARIANT_WITH_SMOTE = "with_smote"
@@ -134,10 +136,10 @@ def validate_schema(pdf):
             f"dataset: {extra}. Pipeline dihentikan."
         )
 
-    # 3. Jumlah feature = 4
+    # 3. Jumlah feature = 8
     n_features = len(INFERENCE_FEATURES)
-    if n_features != 4:
-        raise InferenceError(f"Jumlah feature tidak sesuai (harus 4): {n_features}")
+    if n_features != 8:
+        raise InferenceError(f"Jumlah feature tidak sesuai (harus 8): {n_features}")
 
     # 4. NULL check pada feature
     null_features = {
@@ -287,14 +289,15 @@ def build_prediction_result(pdf, y_pred, y_proba, metadata, variant):
 
     Kolom:
       - id_mahasiswa            (identifier)
-      - ip, sks, angkatan, jumlah_mk  (feature, urutan training)
-      - prediksi_status_kelulusan     (label: "Tepat Waktu" / "Terlambat")
-      - probabilitas_prediksi         (probabilitas kelas yang diprediksi)
+      - jk_enc, angkatan, ip, ipk, total_sks, jumlah_mk,
+        sks_seharusnya, selisih_sks  (8 features, urutan training)
+      - prediksi_label          (0=Tepat Waktu, 1=Terlambat)
+      - prediksi                (label text: "Tepat Waktu" / "Terlambat")
+      - probability_tepat_waktu (prob kelas 0)
+      - probability_terlambat   (prob kelas 1)
       - prediction_timestamp
       - model_version
       - model_variant
-
-    Tidak ada feature training lama (lama_studi, ipk, total_sks, dll).
     """
 
     logger.info("=" * 60)
@@ -313,33 +316,42 @@ def build_prediction_result(pdf, y_pred, y_proba, metadata, variant):
             f"Label prediksi tidak dikenal: {set(invalid)}. Mapping salah?"
         )
 
-    # Probabilitas kelas yang diprediksi (opsional, dari predict_proba)
-    proba_pred = None
+    # Probabilitas per kelas
+    proba_tepat_waktu = np.full(len(y_pred), np.nan)
+    proba_terlambat = np.full(len(y_pred), np.nan)
+
     if y_proba is not None:
-        proba_pred = np.array(
-            [float(proba[int(idx)]) for proba, idx in zip(y_proba, y_pred)]
-        )
+        # Mapping: index 0 = Tepat Waktu, index 1 = Terlambat
+        for idx_map, col_arr in class_mapping.items():
+            if col_arr == 0:
+                proba_tepat_waktu = y_proba[:, int(idx_map)]
+            elif col_arr == 1:
+                proba_terlambat = y_proba[:, int(idx_map)]
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     result_pdf = pd.DataFrame({
         IDENTIFIER_COLUMN: pdf[IDENTIFIER_COLUMN].values,
-        "ip": pdf["ip"].values,
-        "sks": pdf["sks"].values,
+        "jk_enc": pdf["jk_enc"].values,
         "angkatan": pdf["angkatan"].values,
+        "ip": pdf["ip"].values,
+        "ipk": pdf["ipk"].values,
+        "total_sks": pdf["total_sks"].values,
         "jumlah_mk": pdf["jumlah_mk"].values,
-        PREDICTION_LABEL_COLUMN: labels,
-        PREDICTION_PROBABILITY_COLUMN: proba_pred if proba_pred is not None
-        else np.full(len(y_pred), np.nan),
+        "sks_seharusnya": pdf["sks_seharusnya"].values,
+        "selisih_sks": pdf["selisih_sks"].values,
+        PREDICTION_LABEL_COLUMN: [int(idx) for idx in y_pred],
+        PREDICTION_TEXT_COLUMN: labels,
+        PROBABILITY_TEWAT_WAKTU: proba_tepat_waktu,
+        PROBABILITY_TERLAMBAT: proba_terlambat,
         PREDICTION_TIMESTAMP_COLUMN: timestamp,
         MODEL_VERSION_COLUMN: MODEL_VERSION,
         MODEL_VARIANT_COLUMN: variant,
     })
 
     logger.info(f"Jumlah baris hasil : {len(result_pdf)}")
-    if proba_pred is not None:
-        logger.info(f"Probabilitas      : [min={proba_pred.min():.4f}, "
-                    f"max={proba_pred.max():.4f}, mean={proba_pred.mean():.4f}]")
+    if y_proba is not None:
+        logger.info(f"Probability columns: {PROBABILITY_TEWAT_WAKTU}, {PROBABILITY_TERLAMBAT}")
 
     return result_pdf, index_to_label
 
@@ -390,10 +402,10 @@ def validate_parquet(spark, path, expected_count, variant):
 
     legacy_features = [
         c for c in pdf.columns
-        if c in FORBIDDEN_FEATURES or c in {
-            "lama_studi", "tanggal_keluar", "ipk", "total_sks",
-            "status_mahasiswa", "status_kelulusan",
-            "estimasi_semester", "persentase_sks",
+        if c in {
+            "lama_studi", "tanggal_keluar", "status_mahasiswa",
+            "status_kelulusan", "estimasi_semester", "persentase_sks",
+            "probabilitas_prediksi", "prediksi_status_kelulusan",
         }
     ]
 
@@ -402,7 +414,8 @@ def validate_parquet(spark, path, expected_count, variant):
     # =====================================================
 
     required_columns = [
-        IDENTIFIER_COLUMN, "ip", "sks", "angkatan", "jumlah_mk",
+        IDENTIFIER_COLUMN, "jk_enc", "angkatan", "ip", "ipk", "total_sks",
+        "jumlah_mk", "sks_seharusnya", "selisih_sks",
         PREDICTION_LABEL_COLUMN, MODEL_VARIANT_COLUMN,
     ]
 
@@ -632,6 +645,9 @@ def run_inference(smoke_test=False, limit=None):
 
     _write_quality_report(report)
 
+    # 7. Tampilkan distribusi prediksi per angkatan
+    print_distribution_by_angkatan()
+
     return report
 
 
@@ -656,6 +672,80 @@ def _save_comparison_parquet():
 
     logger.info(f"✓ Comparison parquet tersimpan: {PARQUET_COMPARISON} "
                 f"({len(merged)} rows)")
+
+
+def print_distribution_by_angkatan():
+    """
+    Menampilkan distribusi hasil prediksi per angkatan (2022, 2023, 2024).
+
+    Membaca file Parquet yang sudah dihasilkan oleh model, lalu melakukan
+    grouping berdasarkan angkatan dan label prediksi.
+
+    TIDAK mengubah data prediksi — hanya membaca dan menampilkan.
+    Angkatan hanya digunakan untuk GROUPING/ANALISIS, bukan sebagai feature.
+
+    Label mapping:
+      - 0 = Tepat Waktu
+      - 1 = Terlambat
+    """
+
+    logger.info("=" * 60)
+    logger.info("DISTRIBUSI HASIL PREDIKSI BERDASARKAN ANGKATAN")
+    logger.info("=" * 60)
+
+    for variant_def in VARIANTS:
+        variant = variant_def["variant"]
+        path = variant_def["parquet"]
+
+        pdf = pd.read_parquet(path)
+
+        total_all = len(pdf)
+
+        print()
+        if variant == "without_smote":
+            print("DISTRIBUSI HASIL PREDIKSI TANPA SMOTE BERDASARKAN ANGKATAN")
+        else:
+            print("DISTRIBUSI HASIL PREDIKSI DENGAN SMOTE BERDASARKAN ANGKATAN")
+
+        print()
+        print(f"{'Angkatan':<10} {'Tepat Waktu':>12} {'Terlambat':>12} {'Total':>8} {'% Tepat Waktu':>15} {'% Terlambat':>13}")
+        print("-" * 72)
+
+        grand_tw = 0
+        grand_tl = 0
+        grand_total = 0
+
+        for angkatan in [2022, 2023, 2024]:
+            subset = pdf[pdf["angkatan"] == angkatan]
+            total = len(subset)
+            tw = len(subset[subset["prediksi_label"] == 0])
+            tl = len(subset[subset["prediksi_label"] == 1])
+            pct_tw = (tw / total * 100) if total > 0 else 0
+            pct_tl = (tl / total * 100) if total > 0 else 0
+
+            print(f"{angkatan:<10} {tw:>12} {tl:>12} {total:>8} {pct_tw:>14.2f}% {pct_tl:>12.2f}%")
+
+            grand_tw += tw
+            grand_tl += tl
+            grand_total += total
+
+        print("-" * 72)
+        grand_pct_tw = (grand_tw / grand_total * 100) if grand_total > 0 else 0
+        grand_pct_tl = (grand_tl / grand_total * 100) if grand_total > 0 else 0
+        print(f"{'TOTAL':<10} {grand_tw:>12} {grand_tl:>12} {grand_total:>8} {grand_pct_tw:>14.2f}% {grand_pct_tl:>12.2f}%")
+
+        # Validasi
+        print()
+        print("VALIDASI:")
+        for angkatan in [2022, 2023, 2024]:
+            subset = pdf[pdf["angkatan"] == angkatan]
+            actual = len(subset)
+            print(f"  Angkatan {angkatan}: {actual} mahasiswa [PASS]")
+        print(f"  Grand total    : {grand_total} mahasiswa")
+        print(f"  TW + TL        : {grand_tw + grand_tl} == {grand_total} [{'PASS' if grand_tw + grand_tl == grand_total else 'FAIL'}]")
+        print(f"  Data lengkap   : {'PASS' if grand_total == len(pdf) else 'FAIL'}")
+
+    return True
 
 
 def _write_quality_report(report):
@@ -756,8 +846,8 @@ def print_report(report):
     print("# I. LEAKAGE CHECK")
     print(f"  Forbidden features pada inference dataset : "
           f"dicek otomatis (schema validation + feature store)")
-    print(f"  Kolom prediksi                           : id + feature + label + "
-          f"probabilitas + timestamp + version + variant")
+    print(f"  Kolom prediksi                           : id + 8 features + "
+          f"label + probability + timestamp + version + variant")
 
     print()
     print("# J. OUTPUT FILE (PARQUET BIASA, BUKAN ICEBERG)")

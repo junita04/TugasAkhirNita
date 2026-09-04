@@ -52,6 +52,41 @@ def _validate_star_schema():
     print(f"  null SKS             : {fact_null_sks}")
 
     # =====================================================
+    # Validasi kolom wajib dim_mahasiswa
+    # =====================================================
+
+    required_dim_cols = [
+        "id_mahasiswa", "jenis_kelamin", "tanggal_masuk", "tanggal_keluar",
+        "ipk", "total_sks", "jumlah_mk", "status_mahasiswa",
+        "angkatan", "semester", "ip", "sks_seharusnya", "selisih_sks",
+        "lama_studi", "status_kelulusan", "label",
+    ]
+    dim_cols = set(dim.columns)
+    missing_dim = [c for c in required_dim_cols if c not in dim_cols]
+    print()
+    print(f"# KOLOM WAJIB DIM_MAHASISWA")
+    print(f"  expected             : {len(required_dim_cols)} kolom")
+    print(f"  actual               : {len(dim_cols)} kolom")
+    print(f"  missing              : {missing_dim if missing_dim else 'none'}")
+    print(f"  schema check         : {'PASS' if not missing_dim else 'FAIL'}")
+
+    # =====================================================
+    # Distribusi label
+    # =====================================================
+
+    label_dist = dim.groupBy("label").count().collect()
+    print()
+    print(f"# DISTRIBUSI LABEL")
+    for row in label_dist:
+        print(f"  label={row['label']}: {row['count']}")
+
+    status_dist = dim.groupBy("status_kelulusan").count().collect()
+    print()
+    print(f"# DISTRIBUSI STATUS KELULUSAN")
+    for row in status_dist:
+        print(f"  {row['status_kelulusan']}: {row['count']}")
+
+    # =====================================================
     # Referential Integrity
     # =====================================================
 
@@ -80,7 +115,7 @@ def _validate_star_schema():
 
     row_multiplication = join_total - dim_total
 
-    matched = joined.filter(F.col("ip").isNotNull()).count()
+    matched = joined.filter(F.col("fact_khs.ip").isNotNull()).count()
     non_matched = join_total - matched
 
     print()
@@ -102,6 +137,8 @@ def _validate_star_schema():
           f"{'PASS' if (dim_total == dim_distinct and fact_total == fact_distinct) else 'FAIL'}")
     print("JOIN VALIDATION       : "
           f"{'PASS' if row_multiplication == 0 else 'FAIL'}")
+    print("SCHEMA VALIDATION     : "
+          f"{'PASS' if not missing_dim else 'FAIL'}")
     print("=" * 88)
 
     return {
@@ -121,6 +158,7 @@ def _validate_star_schema():
         "matched": matched,
         "non_matched": non_matched,
         "row_multiplication": row_multiplication,
+        "missing_dim_columns": missing_dim,
     }
 
 

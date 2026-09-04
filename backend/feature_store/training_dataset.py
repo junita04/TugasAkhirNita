@@ -1,10 +1,7 @@
 from pyspark.sql import functions as F
 
 from backend.spark.session import get_spark
-from backend.config.settings import (
-    ICEBERG_NAMESPACE,
-    GRADUATION_LIMIT_DAYS,
-)
+from backend.config.settings import ICEBERG_NAMESPACE
 from backend.utils.logger import get_logger
 
 from backend.feature_store.feature_engineering import (
@@ -16,6 +13,7 @@ from backend.feature_store.feature_engineering import (
 logger = get_logger(__name__)
 
 TRAINING_TABLE = f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
+TRAINING_TABLE_HIVE = "hive_iceberg.feature_store.training_dataset"
 
 
 def create_training_dataset(joined):
@@ -23,71 +21,64 @@ def create_training_dataset(joined):
     spark = joined.sparkSession
 
     logger.info("=" * 60)
-    logger.info("MEMBUAT TRAINING DATASET (mahasiswa LULUS)")
+    logger.info("MEMBUAT TRAINING DATASET (label IS NOT NULL)")
     logger.info("=" * 60)
 
     df = derive_features(joined)
 
     # =====================================================
-    # Filter mahasiswa LULUS
+    # Filter: hanya data yang memiliki label (0 atau 1)
+    # Mahasiswa aktif 2022-2024 tidak boleh masuk training
     # =====================================================
 
-    lulus = df.filter(
-        F.upper(F.trim(F.col("status_mahasiswa"))) == "LULUS"
-    )
+    labeled = df.filter(F.col("label").isNotNull())
 
-    total_lulus = lulus.count()
-    logger.info(f"Jumlah awal mahasiswa LULUS : {total_lulus}")
+    total_labeled = labeled.count()
+    logger.info(f"Jumlah awal dengan label : {total_labeled}")
 
     # =====================================================
-    # Label status_kelulusan (HANYA untuk mahasiswa LULUS)
-    #
-    # lama_studi (hari) = tanggal_keluar - tanggal_masuk.
-    # Threshold: lama_studi <= 4 tahun (1460 hari) -> Tepat Waktu
-    #            lama_studi >  4 tahun              -> Terlambat
+    # Distribusi label
     # =====================================================
 
-    labeled = lulus.withColumn(
-        "status_kelulusan",
-        F.when(
-            F.col("lama_studi") <= GRADUATION_LIMIT_DAYS,
-            F.lit("Tepat Waktu"),
-        ).otherwise(F.lit("Terlambat")),
-    )
-
-    label_counts = labeled.groupBy("status_kelulusan").count().collect()
-    label_dist = {row.status_kelulusan: row["count"] for row in label_counts}
-    tepat_waktu = label_dist.get("Tepat Waktu", 0)
-    terlambat = label_dist.get("Terlambat", 0)
-    logger.info(f"Label Tepat Waktu : {tepat_waktu}")
-    logger.info(f"Label Terlambat   : {terlambat}")
+    label_counts = labeled.groupBy("label").count().collect()
+    label_dist = {row.label: row["count"] for row in label_counts}
+    tepat_waktu = label_dist.get(0, 0)
+    terlambat = label_dist.get(1, 0)
+    logger.info(f"Label 0 (Tepat Waktu) : {tepat_waktu}")
+    logger.info(f"Label 1 (Terlambat)   : {terlambat}")
 
     # =====================================================
-    # Mahasiswa LULUS tanpa KHS (ip / sks NULL hasil LEFT JOIN)
-    # Tidak diimputasi; didokumentasikan.
+    # TRAINING DATA AUDIT - IP NULL
     # =====================================================
 
-    no_khs = labeled.filter(
-        F.col("ip").isNull() | F.col("sks").isNull()
-    )
-    no_khs_ids = [row.id_mahasiswa for row in no_khs.select("id_mahasiswa").collect()]
-    logger.info(f"Training LULUS tanpa KHS  : {len(no_khs_ids)}")
+    total_sebelum_ip_filter = labeled.count()
+    ip_null = labeled.filter(F.col("ip").isNull()).count()
+    ip_null_ids = [row.id_mahasiswa for row in labeled.filter(F.col("ip").isNull()).select("id_mahasiswa").collect()]
+
+    logger.info("TRAINING DATA AUDIT")
+    logger.info(f"Training sebelum filtering : {total_sebelum_ip_filter}")
+    logger.info(f"IP NULL                    : {ip_null}")
 
     # =====================================================
     # Dataset final: exclude record yang fitur wajib NULL
+    # (termasuk IP NULL)
     # =====================================================
 
     valid = labeled.dropna(subset=FEATURE_X)
 
+    total_sesudah_ip_filter = valid.count()
+    logger.info(f"Training setelah filtering : {total_sesudah_ip_filter}")
+    logger.info(f"Selisih (dikeluarkan)      : {total_sebelum_ip_filter - total_sesudah_ip_filter}")
+
     valid = valid.dropDuplicates(["id_mahasiswa"])
 
-    training_df = valid.select("id_mahasiswa", *FEATURE_X, "status_kelulusan")
+    training_df = valid.select("id_mahasiswa", *FEATURE_X, "label")
 
     # =====================================================
     # Data leakage check
     # =====================================================
 
-    forbidden, extra = check_leakage(training_df, label_columns=["status_kelulusan"])
+    forbidden, extra = check_leakage(training_df, label_columns=["label"])
 
     logger.info(f"Leakage check: forbidden={forbidden} extra={extra}")
 
@@ -101,23 +92,31 @@ def create_training_dataset(joined):
         .createOrReplace()
     )
 
+    # Write to HMS-backed catalog for Trino visibility
+    (
+        training_df.writeTo(TRAINING_TABLE_HIVE)
+        .using("iceberg")
+        .createOrReplace()
+    )
+
     logger.info(f"Rows Training Dataset : {training_df.count()}")
     logger.info("✓ Training Dataset berhasil dibuat.")
     logger.info("=" * 60)
 
     report = {
         "table": TRAINING_TABLE,
-        "jumlah_awal_lulus": total_lulus,
+        "jumlah_awal_labeled": total_labeled,
+        "jumlah_ip_null_dikeluarkan": ip_null,
+        "ip_null_ids": ip_null_ids,
         "jumlah_valid": training_df.count(),
-        "jumlah_tanpa_khs": len(no_khs_ids),
-        "excluded_ids_no_khs": no_khs_ids,
-        "label_tepat_waktu": tepat_waktu,
-        "label_terlambat": terlambat,
+        "label_0_tepat_waktu": tepat_waktu,
+        "label_1_terlambat": terlambat,
         "null_feature_after_dropna": 0,
         "duplicate_id": training_df.count()
         - training_df.select("id_mahasiswa").distinct().count(),
         "leakage_forbidden": forbidden,
         "leakage_extra": extra,
+        "feature_columns": FEATURE_X,
     }
 
     return training_df, report

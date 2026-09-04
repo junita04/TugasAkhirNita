@@ -1,128 +1,265 @@
-"""
-Full audit: check all charts, registered viz types, and available color schemes
-"""
-import requests
-import json
+import sys
+sys.path.insert(0, '/opt/airflow')
+import pandas as pd
+import numpy as np
+from backend.spark.session import get_spark
 
-BASE = "http://localhost:8088"
+spark = get_spark('FullAudit2')
 
-def api():
-    s = requests.Session()
-    r = s.post(f"{BASE}/api/v1/security/login", json={"username":"admin","password":"change-me","provider":"db"})
-    token = r.json()["access_token"]
-    s.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
-    return s
+print("=" * 100)
+print("COMPREHENSIVE ML PIPELINE AUDIT - CORRECTED")
+print("=" * 100)
 
-s = api()
+# ============================================================
+# 1. AUDIT INFERENCE DATA FROM FEATURE STORE
+# ============================================================
+print()
+print("=" * 100)
+print("1. AUDIT DATA INFERENCE PER ANGKATAN (DARI FEATURE STORE)")
+print("=" * 100)
 
-# 1. Check all charts
-print("=" * 80)
-print("ALL CHARTS STATUS")
-print("=" * 80)
+inference_fs = spark.table('iceberg.feature_store.inference_dataset').toPandas()
+print(f"Total inference: {len(inference_fs)}")
 
-chart_ids = [66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,91,100]
-ok = 0
-fail = 0
-for cid in sorted(chart_ids):
-    r1 = s.get(f"{BASE}/api/v1/chart/{cid}")
-    if r1.status_code != 200:
-        print(f"Chart {cid}: NOT FOUND")
-        fail += 1
-        continue
-    c = r1.json()["result"]
-    name = c["slice_name"]
-    viz = c["viz_type"]
-    qc_str = c.get("query_context")
-    ds_id = c["datasource_id"]
-    params = json.loads(c["params"]) if c["params"] else {}
+FEATURES = ['jk_enc', 'angkatan', 'ip', 'ipk', 'total_sks', 'jumlah_mk', 'sks_seharusnya', 'selisih_sks']
+
+print()
+print("FEATURE STATS PER ANGKATAN (INFERENCE):")
+print()
+header = f"{'Angkatan':<10} {'N':>6} {'Mean SKS':>10} {'Med SKS':>9} {'Min SKS':>9} {'Max SKS':>9} {'Mean IPK':>10} {'Mean Sem':>9} {'Mean SKS_S':>11} {'Mean Selisih':>13}"
+print(header)
+print("-" * len(header))
+
+for ang in [2022, 2023, 2024]:
+    subset = inference_fs[inference_fs['angkatan'] == ang]
+    n = len(subset)
+    mean_sks = subset['total_sks'].mean()
+    med_sks = subset['total_sks'].median()
+    min_sks = subset['total_sks'].min()
+    max_sks = subset['total_sks'].max()
+    mean_ipk = subset['ipk'].mean()
+    mean_sem = subset['semester'].mean()
+    mean_sks_s = subset['sks_seharusnya'].mean()
+    mean_sel = subset['selisih_sks'].mean()
+    print(f"{ang:<10} {n:>6} {mean_sks:>10.2f} {med_sks:>9.0f} {min_sks:>9.0f} {max_sks:>9.0f} {mean_ipk:>10.4f} {mean_sem:>9.2f} {mean_sks_s:>11.2f} {mean_sel:>13.2f}")
+
+print()
+print("SEMESTER DISTRIBUTION:")
+for ang in [2022, 2023, 2024]:
+    subset = inference_fs[inference_fs['angkatan'] == ang]
+    sem_dist = subset['semester'].value_counts().sort_index()
+    print(f"  Angkatan {ang}: {dict(sem_dist)}")
+
+print()
+print("SKS_SEHARUSNYA DISTRIBUTION:")
+for ang in [2022, 2023, 2024]:
+    subset = inference_fs[inference_fs['angkatan'] == ang]
+    sks_dist = subset['sks_seharusnya'].value_counts().sort_index()
+    print(f"  Angkatan {ang}: {dict(sks_dist)}")
+
+# ============================================================
+# 2. AUDIT PROBABILITY DISTRIBUTION
+# ============================================================
+print()
+print("=" * 100)
+print("2. AUDIT PROBABILITY DISTRIBUTION PER ANGKATAN")
+print("=" * 100)
+
+pred_no = pd.read_parquet('/opt/airflow/data/predictions/prediction_result_without_smote.parquet')
+pred_sm = pd.read_parquet('/opt/airflow/data/predictions/prediction_result_with_smote.parquet')
+
+for label, pred_df in [("TANPA SMOTE", pred_no), ("DENGAN SMOTE", pred_sm)]:
+    print()
+    print(f"--- {label} ---")
+    print()
+    header = f"{'Angkatan':<10} {'N':>6} {'Pred TW':>8} {'Pred TL':>8} {'Min P(TW)':>11} {'Mean P(TW)':>12} {'Max P(TW)':>11} {'Med P(TW)':>11}"
+    print(header)
+    print("-" * len(header))
     
-    status = "NO_QC"
-    rows = 0
-    if qc_str:
-        qc = json.loads(qc_str)
-        r2 = s.post(f"{BASE}/api/v1/chart/data", json=qc)
-        if r2.status_code == 200:
-            data = r2.json()
-            if "result" in data and data["result"]:
-                rows = data["result"][0].get("rowcount", 0)
-                status = "OK"
-            else:
-                status = "EMPTY"
-        else:
-            try:
-                err = r2.json().get("message", "")[:60]
-            except:
-                err = r2.text[:60]
-            status = f"FAIL:{err}"
+    for ang in [2022, 2023, 2024]:
+        subset = pred_df[pred_df['angkatan'] == ang]
+        n = len(subset)
+        pred_tw = (subset['prediksi_label'] == 0).sum()
+        pred_tl = (subset['prediksi_label'] == 1).sum()
+        min_ptw = subset['probability_tepat_waktu'].min()
+        mean_ptw = subset['probability_tepat_waktu'].mean()
+        max_ptw = subset['probability_tepat_waktu'].max()
+        med_ptw = subset['probability_tepat_waktu'].median()
+        print(f"{ang:<10} {n:>6} {pred_tw:>8} {pred_tl:>8} {min_ptw:>11.6f} {mean_ptw:>12.6f} {max_ptw:>11.6f} {med_ptw:>11.6f}")
+
+# ============================================================
+# 3. FEATURE DISTRIBUTION TRAINING vs INFERENCE
+# ============================================================
+print()
+print("=" * 100)
+print("3. FEATURE DISTRIBUTION: TRAINING vs INFERENCE")
+print("=" * 100)
+
+training_fs = spark.table('iceberg.feature_store.training_dataset').toPandas()
+
+print()
+header = f"{'Feature':<16} {'Set':<16} {'Min':>10} {'Max':>10} {'Mean':>10} {'Median':>10} {'Std':>10}"
+print(header)
+print("-" * len(header))
+
+for feat in FEATURES:
+    t = training_fs[feat]
+    print(f"{feat:<16} {'Training':<16} {t.min():>10.4f} {t.max():>10.4f} {t.mean():>10.4f} {t.median():>10.4f} {t.std():>10.4f}")
     
-    marker = "OK" if status == "OK" else "!!"
-    print(f"  [{marker}] Chart {cid:4d}: {viz:25s} | {status:8s} | {rows:>5} rows | ds={ds_id} | {name}")
-    if status == "OK":
-        ok += 1
-    else:
-        fail += 1
+    for ang in [2022, 2023, 2024]:
+        subset = inference_fs[inference_fs['angkatan'] == ang]
+        s = subset[feat]
+        print(f"{'':<16} {f'Infer {ang}':<16} {s.min():>10.4f} {s.max():>10.4f} {s.mean():>10.4f} {s.median():>10.4f} {s.std():>10.4f}")
+    print()
 
-print(f"\nTotal: {ok+fail}, OK: {ok}, FAIL: {fail}")
+# ============================================================
+# 4. SELISIH SKS DISTRIBUTION
+# ============================================================
+print()
+print("=" * 100)
+print("4. SELISIH SKS DISTRIBUTION")
+print("=" * 100)
 
-# 2. Check dataset 5 columns for IPK
-print("\n" + "=" * 80)
-print("DATASET 5 (data_referensi_mahasiswa) - IPK column details")
-print("=" * 80)
-r = s.get(f"{BASE}/api/v1/dataset/5")
-ds = r.json()["result"]
-for col in ds.get("columns", []):
-    if col["column_name"] == "ipk":
-        print(f"  column: {col['column_name']}")
-        print(f"  type: {col.get('type')}")
-        print(f"  is_dttm: {col.get('is_dttm')}")
-        break
+print()
+header = f"{'Angkatan':<10} {'N':>6} {'Sel<0':>8} {'Sel=0':>8} {'Sel>0':>8} {'%Sel<0':>8}"
+print(header)
+print("-" * 50)
 
-# 3. Test IPK data directly via Trino
-print("\n" + "=" * 80)
-print("TEST IPK QUERY VIA SUPERSET SQL LAB")
-print("=" * 80)
+for ang in [2022, 2023, 2024]:
+    subset = inference_fs[inference_fs['angkatan'] == ang]
+    n = len(subset)
+    sel_neg = (subset['selisih_sks'] < 0).sum()
+    sel_zero = (subset['selisih_sks'] == 0).sum()
+    sel_pos = (subset['selisih_sks'] > 0).sum()
+    pct_neg = sel_neg / n * 100 if n > 0 else 0
+    print(f"{ang:<10} {n:>6} {sel_neg:>8} {sel_zero:>8} {sel_pos:>8} {pct_neg:>7.2f}%")
 
-# Try creating a simple chart to test IPK distribution
-# Use SQL query to get IPK bins
-params_test = {
-    "viz_type": "table",
-    "all_columns": [],
-    "metrics": [{"expressionType": "SQL", "sqlExpression": "COUNT(*)", "label": "jumlah"}],
-    "groupby": ["ipk"],
-    "order_desc": True,
-    "row_limit": 500,
-    "page_length": 20,
-    "include_search": True,
-    "show_cell_bars": True,
-    "adhoc_filters": [{"expressionType": "SIMPLE", "subject": "status_mahasiswa", "operator": "==", "comparator": "AKTIF", "clause": "WHERE"}],
-}
+# Contoh
+print()
+print("TOP 10 Angkatan 2023 - Selisih SKS Terbesar:")
+subset_2023 = inference_fs[inference_fs['angkatan'] == 2023].copy()
+top10 = subset_2023.nlargest(10, 'selisih_sks')
+print(top10[['id_mahasiswa', 'total_sks', 'sks_seharusnya', 'selisih_sks', 'ipk', 'ip']].to_string(index=False))
 
-qc_test = {
-    "datasource": {"id": 5, "type": "table"},
-    "queries": [{
-        "time_range": "No filter",
-        "granularity_sqla": None,
-        "row_limit": 500,
-        "metrics": [{"expressionType": "SQL", "sqlExpression": "COUNT(*)", "label": "jumlah"}],
-        "columns": ["ipk"],
-        "filters": [{"col": "status_mahasiswa", "op": "==", "val": "AKTIF"}],
-    }],
-    "form_data": params_test,
-    "result_format": "json",
-    "result_type": "full",
-}
+print()
+print("TOP 10 Angkatan 2023 - Selisih SKS Terkecil:")
+bottom10 = subset_2023.nsmallest(10, 'selisih_sks')
+print(bottom10[['id_mahasiswa', 'total_sks', 'sks_seharusnya', 'selisih_sks', 'ipk', 'ip']].to_string(index=False))
 
-r2 = s.post(f"{BASE}/api/v1/chart/data", json=qc_test)
-if r2.status_code == 200:
-    data = r2.json()
-    rc = data["result"][0].get("rowcount", 0) if data.get("result") else 0
-    print(f"IPK table test: OK ({rc} rows)")
-    d = data["result"][0].get("data", []) if data.get("result") else []
-    if d:
-        print(f"  Sample: {d[:3]}")
+print()
+print("TOP 10 Angkatan 2024 - Selisih SKS Terbesar:")
+subset_2024 = inference_fs[inference_fs['angkatan'] == 2024].copy()
+top10 = subset_2024.nlargest(10, 'selisih_sks')
+print(top10[['id_mahasiswa', 'total_sks', 'sks_seharusnya', 'selisih_sks', 'ipk', 'ip']].to_string(index=False))
+
+print()
+print("TOP 10 Angkatan 2024 - Selisih SKS Terkecil:")
+bottom10 = subset_2024.nsmallest(10, 'selisih_sks')
+print(bottom10[['id_mahasiswa', 'total_sks', 'sks_seharusnya', 'selisih_sks', 'ipk', 'ip']].to_string(index=False))
+
+# ============================================================
+# 5. TRAINING DATA COMPOSITION
+# ============================================================
+print()
+print("=" * 100)
+print("5. TRAINING DATA COMPOSITION")
+print("=" * 100)
+
+gold = spark.table('iceberg.gold.dim_mahasiswa').toPandas()
+labeled = gold[gold['label'].notna()].copy()
+
+print()
+print("DISTRIBUSI TRAINING PER ANGKATAN DAN STATUS:")
+print()
+header = f"{'Angkatan':<10} {'Status':<12} {'Label':<12} {'Jumlah':>8}"
+print(header)
+print("-" * 42)
+
+for ang in sorted(labeled['angkatan'].unique()):
+    for status in labeled[labeled['angkatan'] == ang]['status_mahasiswa'].unique():
+        for label in [0, 1]:
+            count = len(labeled[(labeled['angkatan'] == ang) & (labeled['status_mahasiswa'] == status) & (labeled['label'] == label)])
+            if count > 0:
+                label_name = "Tepat Waktu" if label == 0 else "Terlambat"
+                print(f"{ang:<10} {status:<12} {label_name:<12} {count:>8}")
+
+# Cek overlap
+print()
+inference_ids = set(inference_fs['id_mahasiswa'].values)
+training_ids = set(training_fs['id_mahasiswa'].values)
+overlap = inference_ids & training_ids
+print(f"Inference IDs: {len(inference_ids)}")
+print(f"Training IDs: {len(training_ids)}")
+print(f"Overlap: {len(overlap)}")
+if len(overlap) > 0:
+    print(f"WARNING: {len(overlap)} overlap!")
 else:
-    print(f"IPK table test: FAIL ({r2.status_code})")
-    try:
-        print(f"  Error: {r2.json()}")
-    except:
-        print(f"  Error: {r2.text[:200]}")
+    print("PASS: No overlap")
+
+# ============================================================
+# 6. DIAGNOSIS: WHY 0 TW FOR 2023/2024
+# ============================================================
+print()
+print("=" * 100)
+print("6. DIAGNOSIS: ROOT CAUSE ANALYSIS")
+print("=" * 100)
+
+print()
+print("TRAINING LABEL DISTRIBUTION:")
+training_tw = training_fs[training_fs['label'] == 0]
+training_tl = training_fs[training_fs['label'] == 1]
+print(f"  Tepat Waktu (0): {len(training_tw)}")
+print(f"  Terlambat (1): {len(training_tl)}")
+
+print()
+print("TRAINING FEATURE STATS BY LABEL:")
+print()
+header = f"{'Feature':<16} {'TW Mean':>10} {'TW Std':>10} {'TL Mean':>10} {'TL Std':>10}"
+print(header)
+print("-" * 56)
+for feat in FEATURES:
+    tw_mean = training_tw[feat].mean()
+    tw_std = training_tw[feat].std()
+    tl_mean = training_tl[feat].mean()
+    tl_std = training_tl[feat].std()
+    print(f"{feat:<16} {tw_mean:>10.4f} {tw_std:>10.4f} {tl_mean:>10.4f} {tl_std:>10.4f}")
+
+print()
+print("WHY 2023/2024 = 0 TEWAT Waktu:")
+print()
+print("CRITICAL FINDING:")
+print("  Angkatan 2023: semester=5, sks_seharusnya=95")
+print("  Angkatan 2024: semester=3, sks_seharusnya=55")
+print()
+print("  Inference 2023 stats:")
+inf_2023 = inference_fs[inference_fs['angkatan'] == 2023]
+print(f"    Total SKS mean: {inf_2023['total_sks'].mean():.2f}")
+print(f"    SKS Seharusnya: 95")
+print(f"    Selisih SKS mean: {inf_2023['selisih_sks'].mean():.2f}")
+print(f"    IPK mean: {inf_2023['ipk'].mean():.4f}")
+print()
+print("  Inference 2024 stats:")
+inf_2024 = inference_fs[inference_fs['angkatan'] == 2024]
+print(f"    Total SKS mean: {inf_2024['total_sks'].mean():.2f}")
+print(f"    SKS Seharusnya: 55")
+print(f"    Selisih SKS mean: {inf_2024['selisih_sks'].mean():.2f}")
+print(f"    IPK mean: {inf_2024['ipk'].mean():.4f}")
+
+print()
+print("PROBABILITY ANALYSIS:")
+for ang in [2022, 2023, 2024]:
+    subset = pred_no[pred_no['angkatan'] == ang]
+    print(f"  Angkatan {ang}:")
+    print(f"    P(TW) max: {subset['probability_tepat_waktu'].max():.6f}")
+    print(f"    P(TW) mean: {subset['probability_tepat_waktu'].mean():.6f}")
+    above_01 = (subset['probability_tepat_waktu'] > 0.1).sum()
+    above_001 = (subset['probability_tepat_waktu'] > 0.01).sum()
+    print(f"    P(TW) > 0.1: {above_01}")
+    print(f"    P(TW) > 0.01: {above_001}")
+
+spark.stop()
+
+print()
+print("=" * 100)
+print("AUDIT SELESAI")
+print("=" * 100)

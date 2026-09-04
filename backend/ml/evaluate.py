@@ -94,7 +94,7 @@ def _quality_gates(result, registry_info, pipeline, smoke_ok, feature_order_ok):
     return [
         ("training dataset terbaca", result["n_records"] > 0),
         ("X schema benar", feature_order_ok),
-        ("Y schema benar", result["target_column"] == "status_kelulusan"),
+        ("Y schema benar", result["target_column"] == "label"),
         ("no leakage", not result["forbidden_features"]),
         ("train/test split benar", result["test_size"] == 0.20),
         (

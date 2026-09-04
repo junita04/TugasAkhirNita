@@ -40,10 +40,13 @@ def _iceberg_configs(spark_builder):
     Mengonfigurasi Iceberg catalog berdasarkan ICEBERG_CATALOG:
       - 'local'  : Hadoop catalog, warehouse di filesystem lokal
       - 'iceberg': Hadoop catalog, warehouse di MinIO (s3a://)
+    
+    Tambahan: 'hive_iceberg' catalog (Hive Metastore-backed) untuk
+    tabel yang perlu dibaca oleh Trino.
     """
 
     if ICEBERG_CATALOG != "local":
-        return (
+        builder = (
             spark_builder
             .config(
                 f"spark.sql.catalog.{ICEBERG_CATALOG}",
@@ -65,9 +68,26 @@ def _iceberg_configs(spark_builder):
             .config("spark.hadoop.fs.s3a.path.style.access", str(S3_PATH_STYLE_ACCESS).lower())
             .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
             .config("spark.hadoop.fs.s3a.fast.upload", "true")
-            .config("spark.hadoop.fs.s3a.fast.upload.buffer", "bytebuffer")
-            .config("spark.hadoop.fs.s3a.buffer.dir", SPARK_LOCAL_DIR)
         )
+        
+        # HMS-backed Iceberg catalog for Trino visibility
+        from backend.config.settings import HIVE_METASTORE_URI
+        builder = (
+            builder
+            .config(
+                "spark.sql.catalog.hive_iceberg",
+                "org.apache.iceberg.spark.SparkCatalog"
+            )
+            .config("spark.sql.catalog.hive_iceberg.type", "hive")
+            .config("spark.sql.catalog.hive_iceberg.uri", HIVE_METASTORE_URI)
+            .config(
+                "spark.sql.catalog.hive_iceberg.warehouse",
+                ICEBERG_WAREHOUSE,
+            )
+            .config("spark.sql.catalog.hive_iceberg.cache-enabled", "false")
+        )
+        
+        return builder
 
     return (
         spark_builder

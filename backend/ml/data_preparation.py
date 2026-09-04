@@ -8,27 +8,31 @@ logger = get_logger(__name__)
 
 TRAINING_TABLE = f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
 
-TARGET_COLUMN = "status_kelulusan"
+TARGET_COLUMN = "label"
 IDENTIFIER_COLUMN = "id_mahasiswa"
 
 FEATURE_COLUMNS = [
-    "ip",
-    "sks",
+    "jk_enc",
     "angkatan",
+    "ip",
+    "ipk",
+    "total_sks",
     "jumlah_mk",
+    "sks_seharusnya",
+    "selisih_sks",
 ]
 
 FORBIDDEN_FEATURES = [
     IDENTIFIER_COLUMN,  # hanya identifier, bukan X
     "lama_studi",
     "tanggal_keluar",
-    "ipk",
-    "total_sks",
     "status_mahasiswa",
     "status_kelulusan",
+    "jenis_kelamin",
+    "tanggal_masuk",
 ]
 
-POSITIVE_CLASS = "Tepat Waktu"
+POSITIVE_CLASS = 1  # Terlambat (label=1)
 
 
 def load_training_dataset():
@@ -36,8 +40,8 @@ def load_training_dataset():
     Membaca training dataset dari Feature Store dan mengembalikannya
     sebagai pandas DataFrame.
 
-    Training dataset (Tahap 4) sudah bersih: tidak ada null pada fitur
-    wajib, tidak ada duplicate id (grain 1 baris = 1 mahasiswa LULUS).
+    Training dataset sudah bersih: tidak ada null pada fitur wajib,
+    tidak ada duplicate id (grain 1 baris = 1 mahasiswa dengan label).
     """
 
     spark = get_spark("TugasAkhirNita - ML Data Preparation")
@@ -104,8 +108,9 @@ def check_model_leakage(pdf):
     """
     Pemeriksaan leakage otomatis sebelum training.
 
-    Hanya X = [ip, sks, angkatan, jumlah_mk] yang boleh masuk input model.
-    Y = status_kelulusan (label), id_mahasiswa = identifier.
+    Hanya X = [jk_enc, angkatan, ip, ipk, total_sks, jumlah_mk,
+               sks_seharusnya, selisih_sks] yang boleh masuk input model.
+    Y = label (0/1), id_mahasiswa = identifier.
     """
 
     allowed = set(FEATURE_COLUMNS) | {TARGET_COLUMN, IDENTIFIER_COLUMN}
@@ -123,11 +128,11 @@ def check_model_leakage(pdf):
 
 def build_target_encoding(pdf):
     """
-    Enkoding target kategori -> integer.
+    Enkoding target integer -> integer (sudah 0/1).
 
-    Mapping berbasis urutan asli kelas (prediktabilitas dan konsistensi):
-      - Tepat Waktu -> 0
-      - Terlambat  -> 1
+    Mapping:
+      - 0 -> 0 (Tepat Waktu)
+      - 1 -> 1 (Terlambat)
 
     Dictionary mapping disimpan agar konsisten saat inferensi.
     """

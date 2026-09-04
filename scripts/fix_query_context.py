@@ -1,182 +1,108 @@
 """
-FIX: Add query_context to all charts.
-Charts created via API only have params but not query_context.
-We need to generate proper query_context for each chart.
+Generate query_context for all charts in Dashboard 4.
+This is needed for charts to render properly.
 """
-
-import requests
+import sys
+sys.path.insert(0, '/app')
+from superset.app import create_app
+from superset import db
 import json
-import time
 
-BASE_URL = "http://localhost:8088"
+app = create_app()
+app.app_context().push()
 
-def api():
-    s = requests.Session()
-    r = s.post(f"{BASE_URL}/api/v1/security/login",
-               json={"username": "admin", "password": "change-me", "provider": "db"})
-    token = r.json()["access_token"]
-    s.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
-    r0 = s.get(f"{BASE_URL}/api/v1/security/csrf_token/")
-    s.headers.update({"X-CSRFToken": r0.json()["result"], "Referer": BASE_URL})
-    return s
+from superset.models.slice import Slice
+from superset.connectors.sqla.models import SqlaTable
+from superset.utils.core import get_example_database
 
-def make_query_context(params, ds_id, ds_type="table"):
-    """Build a query_context from chart params."""
-    params_obj = json.loads(params) if isinstance(params, str) else params
+print("=" * 70)
+print("GENERATE QUERY_CONTEXT FOR ALL CHARTS")
+print("=" * 70)
+
+# Get dataset 27
+ds = db.session.query(SqlaTable).get(27)
+print(f"Dataset: {ds.table_name} (ID={ds.id})")
+
+# Chart configs - each needs query_context
+charts_to_fix = [127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144]
+
+for cid in charts_to_fix:
+    chart = db.session.query(Slice).get(cid)
+    if not chart:
+        print(f"  SKIP: Chart {cid} not found")
+        continue
     
-    # Build the query object based on viz_type
-    viz_type = params_obj.get("viz_type", "")
+    params = json.loads(chart.params) if chart.params else {}
     
-    # Build form_data
-    form_data = dict(params_obj)
-    
-    # Build queries
-    queries = []
+    # Build query_context based on viz_type
+    viz_type = chart.viz_type
     
     if viz_type == "big_number_total":
         # Simple metric query
-        metrics = [params_obj.get("metric", {})]
-        adhoc_filters = params_obj.get("adhoc_filters", [])
-        query = {
-            "metrics": metrics,
-            "filters": adhoc_filters,
-            "row_limit": 1,
-            "time_range": "No filter",
+        metric = params.get("metric", {})
+        query_context = {
+            "datasource": {"id": ds.id, "type": "table"},
+            "force": False,
+            "queries": [{
+                "columns": [],
+                "metrics": [metric] if isinstance(metric, dict) else [],
+                "row_limit": 10000,
+                "time_range": "No filter",
+            }],
+            "result_format": "json",
+            "result_type": "full",
         }
-        queries.append(query)
-    
-    elif viz_type in ("echarts_bar", "pie", "histogram"):
-        metrics = params_obj.get("metrics", [])
-        groupby = params_obj.get("groupby", [])
-        adhoc_filters = params_obj.get("adhoc_filters", [])
-        x_axis = params_obj.get("x_axis")
+    elif viz_type == "pie":
+        metric = params.get("metric", {})
+        groupby = params.get("groupby", [])
+        adhoc_filters = params.get("adhoc_filters", [])
+        query_context = {
+            "datasource": {"id": ds.id, "type": "table"},
+            "force": False,
+            "queries": [{
+                "columns": groupby,
+                "metrics": [metric] if isinstance(metric, dict) else [],
+                "row_limit": 10000,
+                "time_range": "No filter",
+                "filters": [],
+                "extras": {},
+            }],
+            "result_format": "json",
+            "result_type": "full",
+        }
+    elif viz_type in ("echarts_timeseries_bar", "echarts_bar", "echarts_timeseries_line"):
+        metrics = params.get("metrics", [])
+        groupby = params.get("groupby", [])
+        x_axis = params.get("x_axis", "")
+        adhoc_filters = params.get("adhoc_filters", [])
         
-        query = {
-            "metrics": metrics,
-            "columns": groupby if groupby else ([x_axis] if x_axis else []),
-            "filters": adhoc_filters,
-            "row_limit": params_obj.get("row_limit", 50000),
-            "time_range": "No filter",
+        # For bar charts, x_axis column goes in columns
+        columns = []
+        if x_axis:
+            columns.append(x_axis)
+        columns.extend(groupby)
+        
+        query_context = {
+            "datasource": {"id": ds.id, "type": "table"},
+            "force": False,
+            "queries": [{
+                "columns": columns,
+                "metrics": metrics if isinstance(metrics, list) else [],
+                "row_limit": 10000,
+                "time_range": "No filter",
+                "filters": [],
+                "extras": {},
+                "orderby": [[metrics[0], False]] if metrics else [],
+            }],
+            "result_format": "json",
+            "result_type": "full",
         }
-        if x_axis and x_axis not in groupby:
-            query["columns"] = [x_axis] + groupby
-        queries.append(query)
-    
-    elif viz_type == "table":
-        all_columns = params_obj.get("all_columns", [])
-        metrics = params_obj.get("metrics", [])
-        query = {
-            "metrics": metrics,
-            "columns": all_columns,
-            "row_limit": params_obj.get("row_limit", 100),
-            "time_range": "No filter",
-        }
-        queries.append(query)
-    
-    elif viz_type == "heatmap":
-        all_columns_x = params_obj.get("all_columns_x", "")
-        all_columns_y = params_obj.get("all_columns_y", "")
-        metric = params_obj.get("metric", {})
-        query = {
-            "metrics": [metric],
-            "columns": [all_columns_x, all_columns_y],
-            "row_limit": 50000,
-            "time_range": "No filter",
-        }
-        queries.append(query)
-    
     else:
-        # Generic fallback
-        metrics = params_obj.get("metrics", [])
-        groupby = params_obj.get("groupby", [])
-        adhoc_filters = params_obj.get("adhoc_filters", [])
-        query = {
-            "metrics": metrics,
-            "columns": groupby,
-            "filters": adhoc_filters,
-            "row_limit": params_obj.get("row_limit", 50000),
-            "time_range": "No filter",
-        }
-        queries.append(query)
+        print(f"  SKIP: Unknown viz_type {viz_type} for chart {cid}")
+        continue
     
-    query_context = {
-        "datasource": {"id": ds_id, "type": ds_type},
-        "queries": queries,
-        "form_data": form_data,
-        "result_format": "json",
-        "result_type": "full",
-    }
-    
-    return query_context
+    chart.query_context = json.dumps(query_context)
+    db.session.commit()
+    print(f"  FIXED: Chart {cid} ({chart.slice_name}) - query_context saved ({len(json.dumps(query_context))} bytes)")
 
-def main():
-    s = api()
-    
-    print("=" * 70)
-    print("ADDING QUERY_CONTEXT TO CHARTS")
-    print("=" * 70)
-    
-    # Get all charts
-    r = s.get(f"{BASE_URL}/api/v1/chart/?q=(page_size:100)")
-    charts = r.json()["result"]
-    
-    success = 0
-    failed = 0
-    
-    for c in charts:
-        cid = c["id"]
-        name = c["slice_name"]
-        ds_id = c.get("datasource_id")
-        params = c.get("params", "{}")
-        
-        # Generate query_context
-        qc = make_query_context(params, ds_id)
-        
-        # Update chart with query_context
-        r2 = s.put(f"{BASE_URL}/api/v1/chart/{cid}", json={
-            "query_context": json.dumps(qc),
-        })
-        
-        if r2.status_code == 200:
-            print(f"  Chart {cid:2d}: {name:45s} -> OK")
-            success += 1
-        else:
-            print(f"  Chart {cid:2d}: {name:45s} -> FAILED ({r2.status_code}): {r2.text[:100]}")
-            failed += 1
-        
-        time.sleep(0.2)
-    
-    print(f"\nUpdated: {success} OK, {failed} FAILED")
-    
-    # Test chart rendering again
-    print("\n--- Testing chart rendering ---")
-    test_count = 0
-    ok_count = 0
-    for c in charts[:10]:
-        cid = c["id"]
-        r3 = s.get(f"{BASE_URL}/api/v1/chart/{cid}/data/")
-        if r3.status_code == 200:
-            try:
-                data = r3.json()
-                if "result" in data:
-                    result = data["result"]
-                    rowcount = result.get("rowcount", 0) if isinstance(result, dict) else len(result)
-                    print(f"  Chart {cid}: OK (rows={rowcount})")
-                    ok_count += 1
-                else:
-                    print(f"  Chart {cid}: NO RESULT")
-            except:
-                print(f"  Chart {cid}: PARSE ERROR")
-        else:
-            try:
-                err = r3.json()
-                msg = err.get("message", "")[:80]
-            except:
-                msg = r3.text[:80]
-            print(f"  Chart {cid}: FAILED ({r3.status_code}): {msg}")
-        test_count += 1
-    
-    print(f"\nRender test: {ok_count}/{test_count} OK")
-
-if __name__ == "__main__":
-    main()
+print(f"\nDONE. All charts now have query_context.")

@@ -28,6 +28,7 @@ belum ada. Pola yang terbukti berhasil:
 import json
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 
 from backend.spark.session import get_spark
@@ -43,12 +44,12 @@ PARQUET_WITH_SMOTE = PREDICTION_DIR / "prediction_result_with_smote.parquet"
 PARQUET_COMPARISON = PREDICTION_DIR / "prediction_comparison.parquet"
 
 TABLE_WITHOUT_SMOTE = (
-    f"{ICEBERG_NAMESPACE}.feature_store.prediction_result_without_smote"
+    "hive_iceberg.feature_store.prediction_result_without_smote"
 )
 TABLE_WITH_SMOTE = (
-    f"{ICEBERG_NAMESPACE}.feature_store.prediction_result_with_smote"
+    "hive_iceberg.feature_store.prediction_result_with_smote"
 )
-TABLE_COMPARISON = f"{ICEBERG_NAMESPACE}.feature_store.prediction_comparison"
+TABLE_COMPARISON = "hive_iceberg.feature_store.prediction_comparison"
 
 IDENTIFIER_COLUMN = "id_mahasiswa"
 
@@ -58,8 +59,10 @@ TARGETS = [
         "parquet": PARQUET_WITHOUT_SMOTE,
         "table": TABLE_WITHOUT_SMOTE,
         "required_columns": [
-            IDENTIFIER_COLUMN, "ip", "sks", "angkatan", "jumlah_mk",
-            "prediksi_status_kelulusan", "probabilitas_prediksi",
+            IDENTIFIER_COLUMN, "jk_enc", "angkatan", "ip", "ipk", "total_sks",
+            "jumlah_mk", "sks_seharusnya", "selisih_sks",
+            "prediksi_label", "prediksi",
+            "probability_tepat_waktu", "probability_terlambat",
             "prediction_timestamp", "model_version", "model_variant",
         ],
     },
@@ -68,8 +71,10 @@ TARGETS = [
         "parquet": PARQUET_WITH_SMOTE,
         "table": TABLE_WITH_SMOTE,
         "required_columns": [
-            IDENTIFIER_COLUMN, "ip", "sks", "angkatan", "jumlah_mk",
-            "prediksi_status_kelulusan", "probabilitas_prediksi",
+            IDENTIFIER_COLUMN, "jk_enc", "angkatan", "ip", "ipk", "total_sks",
+            "jumlah_mk", "sks_seharusnya", "selisih_sks",
+            "prediksi_label", "prediksi",
+            "probability_tepat_waktu", "probability_terlambat",
             "prediction_timestamp", "model_version", "model_variant",
         ],
     },
@@ -132,12 +137,46 @@ def _create_table_if_not_exists(spark, table, pdf):
 
 def _write_to_iceberg(spark, table, pdf):
     """
-    Menulis DataFrame ke tabel Iceberg dengan createOrReplace (idempotent).
-    Setelah pre-create, ReplaceTable berjalan normal.
+    Menulis DataFrame ke tabel Iceberg via SQL DDL+INSERT.
+
+    Menghindari spark.createDataFrame() dan Parquet read di executor
+    yang memicu Python worker issue di cluster mode.
     """
-    spark_df = spark.createDataFrame(pdf)
-    spark_df.writeTo(table).using("iceberg").createOrReplace()
-    logger.info(f"  ✓ Data ditulis ke Iceberg : {table}")
+    columns = list(pdf.columns)
+
+    # 1. Drop and recreate table
+    spark.sql(f"DROP TABLE IF EXISTS {table}")
+    col_defs = ", ".join([f"{c} {_spark_type(pdf[c].dtype)}" for c in columns])
+    spark.sql(f"CREATE TABLE {table} ({col_defs}) USING iceberg")
+
+    # 2. Build INSERT statements in batches (driver-side)
+    batch_size = 200
+    total = len(pdf)
+
+    for start in range(0, total, batch_size):
+        batch = pdf.iloc[start:start + batch_size]
+        value_rows = []
+        for _, row in batch.iterrows():
+            vals = []
+            for c in columns:
+                v = row[c]
+                if pd.isna(v):
+                    vals.append("NULL")
+                elif isinstance(v, bool):
+                    vals.append("TRUE" if v else "FALSE")
+                elif isinstance(v, (int, np.integer)):
+                    vals.append(str(int(v)))
+                elif isinstance(v, (float, np.floating)):
+                    vals.append(str(float(v)))
+                else:
+                    escaped = str(v).replace("'", "''")
+                    vals.append(f"'{escaped}'")
+            value_rows.append(f"({', '.join(vals)})")
+
+        values_sql = ", ".join(value_rows)
+        spark.sql(f"INSERT INTO {table} ({', '.join(columns)}) VALUES {values_sql}")
+
+    logger.info(f"  ✓ Data ditulis ke Iceberg : {table} ({total} rows)")
 
 
 def _validate_iceberg(spark, target, expected_count):
@@ -177,11 +216,11 @@ def _validate_iceberg(spark, target, expected_count):
     total_null = sum(null_counts.values())
 
     distribution = {}
-    if "prediksi_status_kelulusan" in iceberg_columns:
+    if "prediksi_label" in iceberg_columns:
         dist_rows = (
-            df.groupBy("prediksi_status_kelulusan")
+            df.groupBy("prediksi_label")
             .count()
-            .orderBy("prediksi_status_kelulusan")
+            .orderBy("prediksi_label")
             .collect()
         )
         distribution = {row[0]: int(row["count"]) for row in dist_rows}

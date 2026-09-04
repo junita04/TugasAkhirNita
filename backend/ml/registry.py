@@ -13,14 +13,14 @@ logger = get_logger(__name__)
 MODEL_NAME = "gaussian_nb_lulusan"
 
 # =====================================================
-# Revisi Tahap 3 (v3.0.0): dataset baru
-# `(asli)req_data_rut (1).xlsx` (dataset revisi final).
-# Versi sebelumnya (v1.0.0, v2.0.0) TIDAK ditimpa.
-# Artifact revisi dataset baru disimpan di direktori baru.
+# Model 8 fitur (sesuai baseline notebook)
+# Fitur: jk_enc, angkatan, ip, ipk, total_sks, jumlah_mk,
+#        sks_seharusnya, selisih_sks
+# Dua varian: without_smote dan with_smote
 # =====================================================
-MODEL_VERSION = "v3.0.0"
+MODEL_VERSION = "v4.0.0"
 
-ARTIFACT_DIR = os.path.join(MODEL_DIR, "gaussian_nb_v3")
+ARTIFACT_DIR = os.path.join(MODEL_DIR, "gaussian_nb_8_features")
 
 
 def _variant_dir(use_smote):

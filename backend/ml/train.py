@@ -45,6 +45,9 @@ N_SPLITS = 10
 # =====================================================
 PREPROCESSING = []
 
+# Nama kelas untuk evaluasi
+TARGET_NAMES = ["Tepat Waktu", "Terlambat"]
+
 
 def build_estimator(use_smote=False):
     """
@@ -116,7 +119,7 @@ def train_model(use_smote=False):
     logger.info(f"X shape               : {X.shape}")
     logger.info(f"Y shape               : {y.shape}")
     logger.info(f"Jumlah feature        : {X.shape[1]}")
-    logger.info(f"Positive class        : {POSITIVE_CLASS} (index {positive_index})")
+    logger.info(f"Positive class        : {POSITIVE_CLASS} (Terlambat)")
 
     # =====================================================
     # 2. Split development (80%) / holdout test (20%)
@@ -236,13 +239,13 @@ def train_model(use_smote=False):
     holdout = {
         "accuracy": float(accuracy_score(y_test, y_pred)),
         "precision": float(
-            precision_score(y_test, y_pred, pos_label=positive_index)
+            precision_score(y_test, y_pred, pos_label=POSITIVE_CLASS)
         ),
         "recall": float(
-            recall_score(y_test, y_pred, pos_label=positive_index)
+            recall_score(y_test, y_pred, pos_label=POSITIVE_CLASS)
         ),
         "f1": float(
-            f1_score(y_test, y_pred, pos_label=positive_index)
+            f1_score(y_test, y_pred, pos_label=POSITIVE_CLASS)
         ),
         "confusion_matrix": confusion_matrix(
             y_test, y_pred, labels=[0, 1]
@@ -251,7 +254,7 @@ def train_model(use_smote=False):
             y_test,
             y_pred,
             labels=[0, 1],
-            target_names=["Tepat Waktu", "Terlambat"],
+            target_names=TARGET_NAMES,
             digits=4,
             zero_division=0,
         ),
