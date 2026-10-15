@@ -1,0 +1,12 @@
+import pandas as pd
+df = pd.read_excel('/opt/airflow/Data/data fix/inference_dataset_full.xlsx')
+print('INFERENCE:')
+print('Shape:', df.shape)
+print('Columns:', list(df.columns))
+print()
+print(df.dtypes)
+print()
+print(df.head(3).to_string())
+print()
+print('Angkatan unique:', sorted(df['angkatan'].unique()))
+print('Label dist (if exists):', df.get('label', pd.Series()).value_counts().to_dict())

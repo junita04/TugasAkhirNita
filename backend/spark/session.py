@@ -258,6 +258,13 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
         spark.sql(
             f"CREATE NAMESPACE IF NOT EXISTS {ICEBERG_NAMESPACE}.{namespace}"
         )
+    # hive_iceberg (HMS-backed) namespace juga perlu dibuat agar
+    # Trino bisa melihat tabel Bronze yang ditulis oleh Spark.
+    if ICEBERG_CATALOG != "local":
+        for namespace in ("bronze", "silver", "gold", "feature_store"):
+            spark.sql(
+                f"CREATE NAMESPACE IF NOT EXISTS hive_iceberg.{namespace}"
+            )
 
     print("=" * 60)
     print(f"Spark App Name : {spark.sparkContext.appName}")

@@ -1,155 +1,93 @@
+import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+import warnings
+warnings.filterwarnings('ignore')
 
-from backend.spark.session import get_spark
-from backend.config.settings import ICEBERG_NAMESPACE
-from backend.utils.logger import get_logger
+TRAINING_PATH = "/opt/airflow/data/data fix/training_dataset_full.xlsx"
+INFERENCE_PATH = "/opt/airflow/data/data fix/inference_dataset_full.xlsx"
 
-logger = get_logger(__name__)
+MODEL_A_CAT = ["angkatan_enc", "jk_enc", "ipk_kategori"]
+MODEL_A_NUM = ["total_sks", "jumlah_mk"]
 
-TRAINING_TABLE = f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
+MODEL_B_CAT = ["angkatan_enc", "jk_enc", "ipk_kategori"]
+MODEL_B_NUM = ["selisih_sks", "kecepatan_sks_per_semester"]
 
-TARGET_COLUMN = "label"
-IDENTIFIER_COLUMN = "id_mahasiswa"
+TARGET = "label"
+ID_COL = "id_mahasiswa"
 
-FEATURE_COLUMNS = [
-    "jk_enc",
-    "angkatan",
-    "ip",
-    "ipk",
-    "total_sks",
-    "jumlah_mk",
-    "sks_seharusnya",
-    "selisih_sks",
-]
-
-FORBIDDEN_FEATURES = [
-    IDENTIFIER_COLUMN,  # hanya identifier, bukan X
-    "lama_studi",
-    "tanggal_keluar",
-    "status_mahasiswa",
-    "status_kelulusan",
-    "jenis_kelamin",
-    "tanggal_masuk",
-]
-
-POSITIVE_CLASS = 1  # Terlambat (label=1)
+TEST_SIZE = 0.2
+RANDOM_STATE = 42
 
 
-def load_training_dataset():
-    """
-    Membaca training dataset dari Feature Store dan mengembalikannya
-    sebagai pandas DataFrame.
-
-    Training dataset sudah bersih: tidak ada null pada fitur wajib,
-    tidak ada duplicate id (grain 1 baris = 1 mahasiswa dengan label).
-    """
-
-    spark = get_spark("TugasAkhirNita - ML Data Preparation")
-
-    logger.info("=" * 60)
-    logger.info("MEMUAT TRAINING DATASET (FEATURE STORE)")
-    logger.info("=" * 60)
-
-    df = spark.table(TRAINING_TABLE)
-
-    pdf = df.toPandas()
-
-    logger.info(f"Rows         : {len(pdf)}")
-    logger.info(f"Kolom        : {list(pdf.columns)}")
-
-    _validate_dataset(pdf)
-
-    return pdf
+def load_training_excel():
+    df = pd.read_excel(TRAINING_PATH)
+    if "id" in df.columns:
+        df = df.drop(columns=["id"])
+    return df
 
 
-def _validate_dataset(pdf):
-    """Validasi dataset sebelum modeling: schema, null, duplicate, distribusi."""
+def load_inference_excel():
+    df = pd.read_excel(INFERENCE_PATH)
+    if "id" in df.columns:
+        df = df.drop(columns=["id"])
+    return df
 
-    expected = set(FEATURE_COLUMNS) | {TARGET_COLUMN, IDENTIFIER_COLUMN}
-    extra = [column for column in pdf.columns if column not in expected]
-    if extra:
-        raise RuntimeError(f"Kolom di luar schema training dataset: {extra}")
 
-    missing = [c for c in expected if c not in pdf.columns]
-    if missing:
-        raise RuntimeError(f"Kolom yang dibutuhkan tidak ditemukan: {missing}")
+def prepare_model_data(df, cat_cols, num_cols):
+    X = df[cat_cols + num_cols].copy()
+    y = df[TARGET].copy()
+    return X, y
 
-    null_features = {
-        column: int(pdf[column].isnull().sum())
-        for column in FEATURE_COLUMNS
+
+def stratified_train_test_split(X, y):
+    return train_test_split(
+        X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
+    )
+
+
+def get_model_a_data():
+    df = load_training_excel()
+    X, y = prepare_model_data(df, MODEL_A_CAT, MODEL_A_NUM)
+    X_train, X_test, y_train, y_test = stratified_train_test_split(X, y)
+    return X_train, X_test, y_train, y_test
+
+
+def get_model_b_data():
+    df = load_training_excel()
+    X, y = prepare_model_data(df, MODEL_B_CAT, MODEL_B_NUM)
+    X_train, X_test, y_train, y_test = stratified_train_test_split(X, y)
+    return X_train, X_test, y_train, y_test
+
+
+def get_inference_data(model="A"):
+    df = load_inference_excel()
+    if model == "B":
+        cat_cols, num_cols = MODEL_B_CAT, MODEL_B_NUM
+    else:
+        cat_cols, num_cols = MODEL_A_CAT, MODEL_A_NUM
+    X = df[cat_cols + num_cols].copy()
+    ids = df[ID_COL].values
+    return X, ids, df
+
+
+def get_feature_config(model="A"):
+    if model == "B":
+        cat, num = MODEL_B_CAT, MODEL_B_NUM
+    else:
+        cat, num = MODEL_A_CAT, MODEL_A_NUM
+    return {
+        "categorical": cat,
+        "numerical": num,
+        "target": TARGET,
+        "id_col": ID_COL,
+        "all_features": cat + num,
     }
-    null_target = int(pdf[TARGET_COLUMN].isnull().sum())
-
-    duplicate_id = int(pdf[IDENTIFIER_COLUMN].duplicated().sum())
-    total = len(pdf)
-    distinct_id = int(pdf[IDENTIFIER_COLUMN].nunique())
-
-    class_dist = pdf[TARGET_COLUMN].value_counts().to_dict()
-
-    logger.info(f"Distinct id             : {distinct_id}")
-    logger.info(f"Duplicate id            : {duplicate_id}")
-    logger.info(f"Null fitur              : {null_features}")
-    logger.info(f"Null target             : {null_target}")
-    logger.info(f"Grain 1 baris = 1 mhs   : {'PASS' if total == distinct_id else 'FAIL'}")
-    logger.info(f"Distribusi target       : {class_dist}")
-
-    if duplicate_id != 0:
-        raise RuntimeError(f"Duplicate id_mahasiswa ditemukan: {duplicate_id}")
-
-    null_values = {k: v for k, v in null_features.items() if v}
-    if null_values:
-        logger.warning(f"Nilai null pada fitur wajib (tidak diimputasi): {null_values}")
-
-    if null_target:
-        logger.warning(f"Nilai null pada target: {null_target}")
 
 
-def check_model_leakage(pdf):
-    """
-    Pemeriksaan leakage otomatis sebelum training.
-
-    Hanya X = [jk_enc, angkatan, ip, ipk, total_sks, jumlah_mk,
-               sks_seharusnya, selisih_sks] yang boleh masuk input model.
-    Y = label (0/1), id_mahasiswa = identifier.
-    """
-
-    allowed = set(FEATURE_COLUMNS) | {TARGET_COLUMN, IDENTIFIER_COLUMN}
-
-    unexpected = [c for c in pdf.columns if c not in allowed]
-    if unexpected:
-        raise RuntimeError(
-            "DATA LEAKAGE DETECTED: "
-            f"kolom di luar X/Y terdeteksi: {unexpected}. "
-            "Training dihentikan."
-        )
-
-    return []
-
-
-def build_target_encoding(pdf):
-    """
-    Enkoding target integer -> integer (sudah 0/1).
-
-    Mapping:
-      - 0 -> 0 (Tepat Waktu)
-      - 1 -> 1 (Terlambat)
-
-    Dictionary mapping disimpan agar konsisten saat inferensi.
-    """
-
-    classes = sorted(pdf[TARGET_COLUMN].unique().tolist())
-    mapping = {label: index for index, label in enumerate(classes)}
-
-    logger.info(f"Class mapping : {mapping}")
-
-    return mapping
-
-
-def encode_target(pdf, mapping):
-    y = pdf[TARGET_COLUMN].map(mapping).astype(int)
-    return y
-
-
-def numpy_X(pdf):
-    X = pdf[FEATURE_COLUMNS].astype(float).to_numpy()
-    return X
+if __name__ == "__main__":
+    X_tr, X_te, y_tr, y_te = get_model_a_data()
+    print(f"Train: {X_tr.shape}, Test: {X_te.shape}")
+    print(f"Train label dist:\n{y_tr.value_counts().sort_index()}")
+    print(f"Test label dist:\n{y_te.value_counts().sort_index()}")
+    print(f"Features: {get_feature_config()}")

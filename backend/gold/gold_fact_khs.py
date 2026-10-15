@@ -6,8 +6,9 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-GOLD_TABLE_FACT = f"{ICEBERG_NAMESPACE}.gold.fact_khs"
-GOLD_TABLE_FACT_HIVE = "hive_iceberg.gold.fact_khs"
+# Katalog HMS-backed agar tabel terlihat oleh Trino
+GOLD_CATALOG = "hive_iceberg"
+GOLD_TABLE_FACT = f"{GOLD_CATALOG}.gold.fact_khs"
 
 # Grain: 1 baris = 1 mahasiswa (satu IP + satu SKS per mahasiswa).
 FACT_KHS_COLUMNS = ["id_mahasiswa", "ip", "sks", "jumlah_data_khs"]
@@ -25,7 +26,7 @@ def process_gold_fact_khs():
     # Membaca Silver Layer (sumber Gold HANYA dari Silver)
     # =====================================================
 
-    df = spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_khs")
+    df = spark.table(f"{GOLD_CATALOG}.silver.silver_khs")
 
     logger.info(f"Rows Silver silver_khs : {df.count()}")
 
@@ -50,19 +51,6 @@ def process_gold_fact_khs():
         df.writeTo(GOLD_TABLE_FACT)
         .using("iceberg")
         .createOrReplace()
-    )
-
-    # Write to HMS-backed catalog for Trino visibility
-    (
-        df.writeTo(GOLD_TABLE_FACT_HIVE)
-        .using("iceberg")
-        .createOrReplace()
-    )
-
-    spark.sql(
-        f"ALTER TABLE {GOLD_TABLE_FACT} SET TBLPROPERTIES ('comment' = "
-        f"'Star Schema Fact - Foreign Key: id_mahasiswa -> dim_mahasiswa "
-        f"(1 baris = 1 mahasiswa)')"
     )
 
     logger.info(f"Rows Gold Tersimpan : {df.count()}")

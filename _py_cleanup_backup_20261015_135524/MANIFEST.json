@@ -1,0 +1,8 @@
+﻿{
+    "files":  [
+                  "backend\\ml\\inference_gold.py",
+                  "backend\\ml\\spark_data.py"
+              ],
+    "timestamp":  "20261015_135524",
+    "reason":  "Python cleanup - category D (superseded, zero references)"
+}

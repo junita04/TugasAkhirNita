@@ -1,4 +1,5 @@
 from pyspark.sql import functions as F
+from pyspark.sql.types import IntegerType
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
@@ -7,13 +8,18 @@ from backend.utils.logger import get_logger
 from backend.feature_store.feature_engineering import (
     FEATURE_X,
     derive_features,
+    derive_ipk_kategori,
     check_leakage,
 )
 
 logger = get_logger(__name__)
 
-TRAINING_TABLE = f"{ICEBERG_NAMESPACE}.feature_store.training_dataset"
-TRAINING_TABLE_HIVE = "hive_iceberg.feature_store.training_dataset"
+# Katalog HMS-backed agar tabel terlihat oleh Trino
+FE_CATALOG = "hive_iceberg"
+TRAINING_TABLE = f"{FE_CATALOG}.feature_store.training_dataset"
+
+# Angkatan training
+TRAINING_ANGKATAN = list(range(2012, 2022))  # 2012-2021
 
 
 def create_training_dataset(joined):
@@ -21,20 +27,55 @@ def create_training_dataset(joined):
     spark = joined.sparkSession
 
     logger.info("=" * 60)
-    logger.info("MEMBUAT TRAINING DATASET (label IS NOT NULL)")
+    logger.info("MEMBUAT TRAINING DATASET (ANGKATAN 2012-2021)")
     logger.info("=" * 60)
 
     df = derive_features(joined)
+    df = derive_ipk_kategori(df)
 
     # =====================================================
-    # Filter: hanya data yang memiliki label (0 atau 1)
-    # Mahasiswa aktif 2022-2024 tidak boleh masuk training
+    # Filter: angkatan 2012-2021 (lulus + aktif)
     # =====================================================
 
-    labeled = df.filter(F.col("label").isNotNull())
+    angkatan_df = df.filter(F.col("angkatan").isin(TRAINING_ANGKATAN))
+
+    total_angkatan = angkatan_df.count()
+    logger.info(f"Jumlah angkatan 2012-2021 : {total_angkatan}")
+
+    # =====================================================
+    # Hitung jumlah lulus vs aktif
+    # =====================================================
+
+    status_dist = angkatan_df.groupBy("status_mahasiswa").count().collect()
+    for row in status_dist:
+        logger.info(f"  Status '{row['status_mahasiswa']}': {row['count']}")
+
+    # =====================================================
+    # Assignment label:
+    # - Lulus (label sudah ada: 0 atau 1)
+    # - Aktif → label = 1 (Terlambat)
+    # =====================================================
+
+    lulus_df = angkatan_df.filter(
+        F.upper(F.trim(F.col("status_mahasiswa"))) != "AKTIF"
+    )
+    aktif_df = angkatan_df.filter(
+        F.upper(F.trim(F.col("status_mahasiswa"))) == "AKTIF"
+    )
+
+    total_lulus = lulus_df.count()
+    total_aktif = aktif_df.count()
+    logger.info(f"Lulus (label existing) : {total_lulus}")
+    logger.info(f"Aktif (label=1)        : {total_aktif}")
+
+    # Aktif: set label = 1 (Terlambat)
+    aktif_labeled = aktif_df.withColumn("label", F.lit(1).cast(IntegerType()))
+
+    # Gabungkan
+    labeled = lulus_df.unionByName(aktif_labeled, allowMissingColumns=True)
 
     total_labeled = labeled.count()
-    logger.info(f"Jumlah awal dengan label : {total_labeled}")
+    logger.info(f"Total setelah label assignment: {total_labeled}")
 
     # =====================================================
     # Distribusi label
@@ -53,7 +94,12 @@ def create_training_dataset(joined):
 
     total_sebelum_ip_filter = labeled.count()
     ip_null = labeled.filter(F.col("ip").isNull()).count()
-    ip_null_ids = [row.id_mahasiswa for row in labeled.filter(F.col("ip").isNull()).select("id_mahasiswa").collect()]
+    ip_null_ids = [
+        row.id_mahasiswa
+        for row in labeled.filter(F.col("ip").isNull())
+        .select("id_mahasiswa")
+        .collect()
+    ]
 
     logger.info("TRAINING DATA AUDIT")
     logger.info(f"Training sebelum filtering : {total_sebelum_ip_filter}")
@@ -66,9 +112,9 @@ def create_training_dataset(joined):
 
     valid = labeled.dropna(subset=FEATURE_X)
 
-    total_sesudah_ip_filter = valid.count()
-    logger.info(f"Training setelah filtering : {total_sesudah_ip_filter}")
-    logger.info(f"Selisih (dikeluarkan)      : {total_sebelum_ip_filter - total_sesudah_ip_filter}")
+    total_sesudah_filter = valid.count()
+    logger.info(f"Training setelah filtering : {total_sesudah_filter}")
+    logger.info(f"Selisih (dikeluarkan)      : {total_sebelum_ip_filter - total_sesudah_filter}")
 
     valid = valid.dropDuplicates(["id_mahasiswa"])
 
@@ -92,31 +138,38 @@ def create_training_dataset(joined):
         .createOrReplace()
     )
 
-    # Write to HMS-backed catalog for Trino visibility
-    (
-        training_df.writeTo(TRAINING_TABLE_HIVE)
-        .using("iceberg")
-        .createOrReplace()
-    )
-
-    logger.info(f"Rows Training Dataset : {training_df.count()}")
-    logger.info("✓ Training Dataset berhasil dibuat.")
+    final_count = training_df.count()
+    logger.info(f"Rows Training Dataset : {final_count}")
+    logger.info("Training Dataset berhasil dibuat.")
     logger.info("=" * 60)
+
+    # =====================================================
+    # Distribusi per angkatan
+    # =====================================================
+
+    angkatan_dist = training_df.groupBy("angkatan").count().orderBy("angkatan").collect()
+    for row in angkatan_dist:
+        logger.info(f"  Angkatan {row['angkatan']}: {row['count']}")
 
     report = {
         "table": TRAINING_TABLE,
-        "jumlah_awal_labeled": total_labeled,
+        "jumlah_awal_angkatan_2012_2021": total_angkatan,
+        "jumlah_lulus": total_lulus,
+        "jumlah_aktif_dilabeli_1": total_aktif,
         "jumlah_ip_null_dikeluarkan": ip_null,
         "ip_null_ids": ip_null_ids,
-        "jumlah_valid": training_df.count(),
+        "jumlah_valid": final_count,
         "label_0_tepat_waktu": tepat_waktu,
         "label_1_terlambat": terlambat,
         "null_feature_after_dropna": 0,
-        "duplicate_id": training_df.count()
+        "duplicate_id": final_count
         - training_df.select("id_mahasiswa").distinct().count(),
         "leakage_forbidden": forbidden,
         "leakage_extra": extra,
         "feature_columns": FEATURE_X,
+        "angkatan_distribution": {
+            str(row["angkatan"]): row["count"] for row in angkatan_dist
+        },
     }
 
     return training_df, report

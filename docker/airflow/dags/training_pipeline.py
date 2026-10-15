@@ -7,20 +7,27 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 # ============================================================
-# Pipeline TRAINING (Tahap 4) - GaussianNB dua varian
+# Pipeline TRAINING (Tahap 4) - Hybrid Naive Bayes
 #
-# Membaca training dataset dari Feature Store (iceberg.feature_store
-# .training_dataset, hasil ETL) lalu melatih & menyimpan model ke Model
-# Registry v3.0.0:
-#   * without_smote : GaussianNB() baseline
-#   * with_smote    : SMOTE + GaussianNB (imblearn pipeline)
+# Mengikuti jalur training TERBARU yang sudah ditetapkan pada
+# `backend/ml/train.py` (blok __main__):
+#   * Model A (utama)      : total_sks, jumlah_mk
+#   * Model B (pembanding) : selisih_sks, kecepatan_sks_per_semester
 #
-# Tiap varian menjadi task Airflow terpisah agar durasi NATIVE training
-# tiap varian terekam di metadata Airflow.
+# Setiap model menjadi task Airflow terpisah agar durasi NATIVE
+# terekam di metadata Airflow. Task memakai ULANG fungsi yang sama
+# (data_preparation + train_model) TANPA mengubah fitur, bobot,
+# algoritma Hybrid Naive Bayes, Stratified 10-Fold CV, kriteria
+# evaluasi, threshold, maupun metode prediksi.
 #
-# MANUAL TRIGGER ONLY (schedule=None). Menjalankan ETL terlebih dahulu
+# MANUAL TRIGGER ONLY (schedule=None). Jalankan ETL terlebih dahulu
 # (DAG prediction_pipeline).
 # ============================================================
+
+TRAIN_SPECS = {
+    "model_a_utama": "A",
+    "model_b_pembanding": "B",
+}
 
 DEFAULT_ARGS = {
     "owner": "nita",
@@ -35,45 +42,61 @@ DEFAULT_ARGS = {
 def _boot():
     if "/opt/airflow" not in sys.path:
         sys.path.insert(0, "/opt/airflow")
+    # train.py memakai bare import `from hybrid_nb import HybridNaiveBayes`,
+    # sehingga backend/ml harus ada di sys.path (pola sama seperti inference.py).
+    if "/opt/airflow/backend/ml" not in sys.path:
+        sys.path.insert(0, "/opt/airflow/backend/ml")
 
 
-def _train_without_smote():
+def _train(model_name: str):
     _boot()
-    from backend.ml.evaluate import _run_variant
+    from backend.ml.data_preparation import (
+        get_model_a_data,
+        get_model_b_data,
+        get_feature_config,
+    )
+    from backend.ml.train import train_model
 
-    result = _run_variant(use_smote=False)
-    if result["status"] != "SUCCESS":
-        raise RuntimeError(f"Training without_smote FAILED: {result['status']}")
-    print(f"[tahap4] TRAIN without_smote OK: {result['registry_info']}")
+    key = TRAIN_SPECS[model_name]
+    if key == "A":
+        X_train, X_test, y_train, y_test = get_model_a_data()
+    else:
+        X_train, X_test, y_train, y_test = get_model_b_data()
 
+    features = get_feature_config(key)
 
-def _train_with_smote():
-    _boot()
-    from backend.ml.evaluate import _run_variant
-
-    result = _run_variant(use_smote=True)
-    if result["status"] != "SUCCESS":
-        raise RuntimeError(f"Training with_smote FAILED: {result['status']}")
-    print(f"[tahap4] TRAIN with_smote OK: {result['registry_info']}")
+    # Urutan argumen PERSIS seperti train.py::__main__. Jika gagal,
+    # exception dibiarkan naik sehingga task Airflow berstatus FAIL.
+    model, metadata = train_model(
+        X_train, y_train, X_test, y_test,
+        features["categorical"], features["numerical"], model_name,
+    )
+    print(
+        f"[tahap4] TRAIN OK: {model_name} "
+        f"(accuracy={metadata['holdout_metrics']['accuracy']:.4f})"
+    )
 
 
 with DAG(
     dag_id="training_pipeline",
     default_args=DEFAULT_ARGS,
-    description="Training Tahap 4: GaussianNB without_smote + with_smote (registry v3.0.0)",
+    description="Training Tahap 4: Model A (utama) + Model B (pembanding) - Hybrid Naive Bayes",
     schedule=None,
     catchup=False,
-    tags=["tahap-4", "training", "ml"],
+    max_active_runs=1,
+    tags=["tahap-4", "training", "ml", "model-a", "model-b"],
 ) as dag:
 
-    t_without = PythonOperator(
-        task_id="train_without_smote",
-        python_callable=_train_without_smote,
+    t_model_a = PythonOperator(
+        task_id="train_model_a_utama",
+        python_callable=_train,
+        op_kwargs={"model_name": "model_a_utama"},
     )
 
-    t_with = PythonOperator(
-        task_id="train_with_smote",
-        python_callable=_train_with_smote,
+    t_model_b = PythonOperator(
+        task_id="train_model_b_pembanding",
+        python_callable=_train,
+        op_kwargs={"model_name": "model_b_pembanding"},
     )
 
-    [t_without, t_with]
+    t_model_a >> t_model_b

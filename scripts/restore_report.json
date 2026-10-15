@@ -1,0 +1,309 @@
+{
+  "schemas_created": [
+    "bronze",
+    "silver",
+    "gold",
+    "feature_store"
+  ],
+  "skipped_existing": [
+    "gold.fact_khs"
+  ],
+  "registered": [
+    "bronze.data_kelas",
+    "bronze.data_kelas_fix",
+    "bronze.data_khs",
+    "bronze.data_khs_fix",
+    "bronze.data_kurikulum",
+    "bronze.data_kurikulum_fix",
+    "bronze.data_program_studi",
+    "bronze.data_program_studi_fix",
+    "bronze.data_referensi_mahasiswa",
+    "bronze.data_referensi_mahasiswa_fix",
+    "feature_store.feature_store_graduation_prediction",
+    "feature_store.inference_dataset",
+    "feature_store.inference_dataset_fix",
+    "feature_store.inference_dataset_v2",
+    "feature_store.inference_mahasiswa_aktif",
+    "feature_store.inference_result",
+    "feature_store.inference_result_new",
+    "feature_store.prediction_comparison",
+    "feature_store.prediction_result",
+    "feature_store.prediction_result_with_smote",
+    "feature_store.prediction_result_without_smote",
+    "feature_store.training_dataset",
+    "feature_store.training_dataset_fix",
+    "feature_store.training_dataset_v2",
+    "feature_store.training_dataset_v2_fe",
+    "feature_store.training_kelulusan",
+    "gold.classification_report",
+    "gold.classification_report_final",
+    "gold.confusion_matrix",
+    "gold.confusion_matrix_final",
+    "gold.data_referensi_mahasiswa",
+    "gold.dim_mahasiswa",
+    "gold.dim_mahasiswa_fix",
+    "gold.fact_khs_fix",
+    "gold.gold_kurikulum",
+    "gold.gold_mahasiswa",
+    "gold.gold_mahasiswa_lama",
+    "gold.gold_program_studi",
+    "gold.inference_result_model_utama",
+    "gold.inference_result_model_utama-d7664e4b37b94b3c99788f1b8604546f",
+    "gold.model_metrics",
+    "gold.model_metrics_final",
+    "gold.model_predictions",
+    "gold.model_predictions_v2",
+    "gold.prediction_by_angkatan",
+    "gold.prediction_by_angkatan_final",
+    "gold.prediction_by_angkatan_v2",
+    "silver.silver_kelas",
+    "silver.silver_khs",
+    "silver.silver_khs_fix",
+    "silver.silver_kurikulum",
+    "silver.silver_mahasiswa",
+    "silver.silver_program_studi",
+    "silver.silver_referensi_mahasiswa_fix"
+  ],
+  "register_failed": [],
+  "verified": [
+    {
+      "table": "bronze.data_kelas",
+      "rows": 3540
+    },
+    {
+      "table": "bronze.data_kelas_fix",
+      "rows": 3540
+    },
+    {
+      "table": "bronze.data_khs",
+      "rows": 28473,
+      "expected": 28473,
+      "match": true
+    },
+    {
+      "table": "bronze.data_khs_fix",
+      "rows": 28273
+    },
+    {
+      "table": "bronze.data_kurikulum",
+      "rows": 999
+    },
+    {
+      "table": "bronze.data_kurikulum_fix",
+      "rows": 147
+    },
+    {
+      "table": "bronze.data_program_studi",
+      "rows": 999
+    },
+    {
+      "table": "bronze.data_program_studi_fix",
+      "rows": 44
+    },
+    {
+      "table": "bronze.data_referensi_mahasiswa",
+      "rows": 37655,
+      "expected": 37655,
+      "match": true
+    },
+    {
+      "table": "bronze.data_referensi_mahasiswa_fix",
+      "rows": 37655
+    },
+    {
+      "table": "feature_store.feature_store_graduation_prediction",
+      "rows": 13328,
+      "expected": 13328,
+      "match": true
+    },
+    {
+      "table": "feature_store.inference_dataset",
+      "rows": 12338
+    },
+    {
+      "table": "feature_store.inference_dataset_fix",
+      "rows": 12338
+    },
+    {
+      "table": "feature_store.inference_dataset_v2",
+      "rows": 12338
+    },
+    {
+      "table": "feature_store.inference_mahasiswa_aktif",
+      "rows": 14662,
+      "expected": 14662,
+      "match": true
+    },
+    {
+      "table": "feature_store.inference_result",
+      "rows": 12338
+    },
+    {
+      "table": "feature_store.inference_result_new",
+      "rows": 12338,
+      "expected": 12338,
+      "match": true
+    },
+    {
+      "table": "feature_store.prediction_comparison",
+      "rows": 12244
+    },
+    {
+      "table": "feature_store.prediction_result",
+      "rows": 14926
+    },
+    {
+      "table": "feature_store.prediction_result_with_smote",
+      "rows": 12501,
+      "expected": 12501,
+      "match": true
+    },
+    {
+      "table": "feature_store.prediction_result_without_smote",
+      "rows": 12501,
+      "expected": 12501,
+      "match": true
+    },
+    {
+      "table": "feature_store.training_dataset",
+      "rows": 15505
+    },
+    {
+      "table": "feature_store.training_dataset_fix",
+      "rows": 15505
+    },
+    {
+      "table": "feature_store.training_dataset_v2",
+      "rows": 15505
+    },
+    {
+      "table": "feature_store.training_dataset_v2_fe",
+      "rows": 15505
+    },
+    {
+      "table": "feature_store.training_kelulusan",
+      "rows": 13181,
+      "expected": 13181,
+      "match": true
+    },
+    {
+      "table": "gold.classification_report",
+      "rows": 3
+    },
+    {
+      "table": "gold.classification_report_final",
+      "rows": 6
+    },
+    {
+      "table": "gold.confusion_matrix",
+      "rows": 4
+    },
+    {
+      "table": "gold.confusion_matrix_final",
+      "rows": 8
+    },
+    {
+      "table": "gold.data_referensi_mahasiswa",
+      "rows": 32712,
+      "expected": 32712,
+      "match": true
+    },
+    {
+      "table": "gold.dim_mahasiswa",
+      "rows": 32703
+    },
+    {
+      "table": "gold.dim_mahasiswa_fix",
+      "rows": 32703
+    },
+    {
+      "table": "gold.fact_khs",
+      "rows": 27843
+    },
+    {
+      "table": "gold.fact_khs_fix",
+      "rows": 27843
+    },
+    {
+      "table": "gold.gold_kurikulum",
+      "rows": 147
+    },
+    {
+      "table": "gold.gold_mahasiswa",
+      "rows": 32738
+    },
+    {
+      "table": "gold.gold_mahasiswa_lama",
+      "rows": 0
+    },
+    {
+      "table": "gold.gold_program_studi",
+      "rows": 44
+    },
+    {
+      "table": "gold.inference_result_model_utama",
+      "rows": 0
+    },
+    {
+      "table": "gold.inference_result_model_utama-d7664e4b37b94b3c99788f1b8604546f",
+      "rows": 0
+    },
+    {
+      "table": "gold.model_metrics",
+      "rows": 1
+    },
+    {
+      "table": "gold.model_metrics_final",
+      "rows": 2
+    },
+    {
+      "table": "gold.model_predictions",
+      "rows": 12244
+    },
+    {
+      "table": "gold.model_predictions_v2",
+      "rows": 12338
+    },
+    {
+      "table": "gold.prediction_by_angkatan",
+      "rows": 6
+    },
+    {
+      "table": "gold.prediction_by_angkatan_final",
+      "rows": 3
+    },
+    {
+      "table": "gold.prediction_by_angkatan_v2",
+      "rows": 3
+    },
+    {
+      "table": "silver.silver_kelas",
+      "rows": 3540
+    },
+    {
+      "table": "silver.silver_khs",
+      "rows": 27843
+    },
+    {
+      "table": "silver.silver_khs_fix",
+      "rows": 27843
+    },
+    {
+      "table": "silver.silver_kurikulum",
+      "rows": 147
+    },
+    {
+      "table": "silver.silver_mahasiswa",
+      "rows": 32703
+    },
+    {
+      "table": "silver.silver_program_studi",
+      "rows": 44
+    },
+    {
+      "table": "silver.silver_referensi_mahasiswa_fix",
+      "rows": 32703
+    }
+  ],
+  "verify_failed": []
+}

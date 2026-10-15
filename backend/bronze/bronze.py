@@ -60,7 +60,9 @@ def _write_sheet(spark, file_path: Path, sheet: str, table_name: str):
     Membaca satu sheet via Spark Excel, lalu tulis ke Iceberg bronze table.
     Mengembalikan (row_count, col_count).
     """
-    full_table = f"{ICEBERG_NAMESPACE}.bronze.{table_name}"
+    # Gunakan hive_iceberg (HMS-backed) agar tabel terdaftar di Hive Metastore
+    # dan terlihat oleh Trino (iceberg catalog = HIVE_METASTORE).
+    full_table = f"hive_iceberg.bronze.{table_name}"
 
     df = (
         spark.read

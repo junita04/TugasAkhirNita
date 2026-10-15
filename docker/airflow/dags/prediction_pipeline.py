@@ -9,7 +9,12 @@ from airflow.operators.python import PythonOperator
 # ============================================================
 # Pipeline ETL (Tahap 4) - Bronze -> Silver -> Gold -> Feature Store
 #
-# Menggunakan dataset baru `(asli)req_data_rut (1).xlsx` (Tahap 1-3 PASS).
+# Tahap 2 menambahkan task baca-saja `prepare_ml_datasets` setelah
+# `feature_store` untuk memvalidasi kesiapan dataset ML dari Feature Store
+# Iceberg (lihat backend/feature_store/ml_export.py). Task ini TIDAK menulis
+# tabel apa pun.
+#
+# Menggunakan dataset baru `(asli)req_data_rut (baru).xlsx`.
 # Tiap tahap dipisahkan menjadi task Airflow tersendiri agar durasi NATIVE
 # tiap tahap (bronze/silver/gold/feature_store) terekam di metadata Airflow.
 #
@@ -30,7 +35,7 @@ DEFAULT_ARGS = {
     "catchup": False,
 }
 
-FILE_NAME = "(asli)req_data_rut (1).xlsx"
+FILE_NAME = "(asli)req_data_rut (baru).xlsx"
 
 
 def _boot():
@@ -76,6 +81,19 @@ def _stage_feature_store():
     print("[tahap4] FEATURE_STORE OK")
 
 
+def _stage_prepare_ml_datasets():
+    _boot()
+    from backend.feature_store.ml_export import validate_feature_store_datasets
+
+    report = validate_feature_store_datasets()
+    print(
+        "[tahap2] ML DATASET READY: "
+        f"training_rows={report['training']['rows']} "
+        f"inference_rows={report['inference']['rows']} "
+        f"missing={report['training']['missing_columns'] + report['inference']['missing_columns']}"
+    )
+
+
 def _notify(task_name: str) -> None:
     print(f"[{datetime.now().isoformat()}] Task selesai: {task_name}")
 
@@ -115,10 +133,23 @@ with DAG(
         python_callable=_stage_feature_store,
     )
 
+    t_prepare_ml = PythonOperator(
+        task_id="prepare_ml_datasets",
+        python_callable=_stage_prepare_ml_datasets,
+    )
+
     t_end = PythonOperator(
         task_id="end",
         python_callable=_notify,
         op_kwargs={"task_name": "end"},
     )
 
-    t_start >> t_bronze >> t_silver >> t_gold >> t_feature_store >> t_end
+    (
+        t_start
+        >> t_bronze
+        >> t_silver
+        >> t_gold
+        >> t_feature_store
+        >> t_prepare_ml
+        >> t_end
+    )

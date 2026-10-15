@@ -3,6 +3,26 @@ FROM apache/spark:3.5.3
 USER root
 
 # ============================================================
+# Install Python 3.11 from deadsnakes PPA to match Airflow's Python version
+# This fixes the PYTHON_VERSION_MISMATCH error between
+# driver (3.11) and executor (3.8)
+# ============================================================
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        software-properties-common \
+        curl \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        python3.11 \
+        python3.11-venv \
+        python3.11-dev \
+        python3-pip \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python \
+    && pip3.11 install --no-cache-dir --upgrade pip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ============================================================
 # Dependency jar yang dibutuhkan seluruh pipeline:
 #   - Apache Iceberg runtime (Spark 3.5)
 #   - PostgreSQL JDBC (serving layer)
@@ -14,10 +34,7 @@ RUN if [ -d /opt/spark ] && [ ! -e /opt/bitnami/spark ]; then \
     fi \
     && mkdir -p /opt/bitnami/spark/jars/extra
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSL -o /opt/bitnami/spark/jars/extra/iceberg-spark-runtime-3.5_2.12.jar \
+RUN curl -fsSL -o /opt/bitnami/spark/jars/extra/iceberg-spark-runtime-3.5_2.12.jar \
         https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.5.2/iceberg-spark-runtime-3.5_2.12-1.5.2.jar && \
     curl -fsSL -o /opt/bitnami/spark/jars/extra/postgresql.jar \
         https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.4/postgresql-42.7.4.jar && \
@@ -30,9 +47,7 @@ RUN apt-get update \
 
 ENV SPARK_JARS_EXTRA=/opt/bitnami/spark/jars/extra
 
-# UID 1001 harus punya entri di /etc/passwd & /etc/group. Jika tidak, Hadoop's
-# UserGroupInformation -> UnixLoginModule gagal dengan
-# "NullPointerException: invalid null input: name" saat Spark Master start.
+# UID 1001 harus punya entri di /etc/passwd & /etc/group
 RUN if ! getent passwd 1001 >/dev/null 2>&1; then \
         if ! getent group 1001 >/dev/null 2>&1; then \
             echo "sparkdl:x:1001:" >> /etc/group; \

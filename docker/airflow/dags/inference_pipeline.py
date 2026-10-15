@@ -7,15 +7,15 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 # ============================================================
-# Pipeline INFERENCE (Tahap 4) - Prediksi + Iceberg Output
+# Pipeline INFERENCE (Tahap 4) - Prediksi Model Utama + Iceberg Output
 #
 # Membaca inference dataset dari Feature Store (iceberg.feature_store
 # .inference_dataset, hasil ETL), memuat model v3.0.0 dari registry,
 # lalu:
-#   * inference       : prediksi 2 varian -> Parquet biasa di
-#                       data/predictions/prediction_result_*.parquet
-#   * iceberg_output  : Parquet -> tabel Iceberg feature_store
-#                       .prediction_result_* (downstream Trino/Superset)
+#   * inference       : prediksi Model Utama (Hybrid Naive Bayes) ->
+#                       Excel di data/data fix/inference_result_model_a_utama.xlsx
+#   * iceberg_output  : Excel -> tabel Iceberg feature_store
+#                       .inference_result_model_a_utama (downstream Trino/Superset)
 #
 # Tiap tahap menjadi task Airflow terpisah agar durasi NATIVE terekam.
 #
@@ -42,10 +42,8 @@ def _stage_inference():
     _boot()
     from backend.ml.inference import run_inference
 
-    report = run_inference()
-    if report.get("status") != "SUCCESS":
-        raise RuntimeError(f"Inference FAILED: {report.get('status')}")
-    print(f"[tahap4] INFERENCE OK: {report['schema_validation']}")
+    df = run_inference("model_a_utama")
+    print(f"[tahap4] INFERENCE OK: {len(df)} rows")
 
 
 def _stage_iceberg_output():
@@ -61,10 +59,10 @@ def _stage_iceberg_output():
 with DAG(
     dag_id="inference_pipeline",
     default_args=DEFAULT_ARGS,
-    description="Inference Tahap 4: prediksi Parquet + output Iceberg (prediction_result)",
+    description="Inference Tahap 4: Model Utama (Hybrid Naive Bayes) -> Excel -> Iceberg",
     schedule=None,
     catchup=False,
-    tags=["tahap-4", "inference", "prediction", "ml"],
+    tags=["tahap-4", "inference", "prediction", "ml", "model-a"],
 ) as dag:
 
     t_inference = PythonOperator(

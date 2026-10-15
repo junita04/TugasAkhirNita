@@ -4,6 +4,9 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Katalog HMS-backed agar tabel terlihat oleh Trino
+GOLD_CATALOG = "hive_iceberg"
+
 
 def process_gold_kurikulum():
 
@@ -16,7 +19,7 @@ def process_gold_kurikulum():
     # Membaca Silver Layer
     # ===============================
 
-    df = spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_kurikulum")
+    df = spark.table(f"{GOLD_CATALOG}.silver.silver_kurikulum")
 
     logger.info(f"Jumlah Data : {df.count()}")
 
@@ -25,7 +28,7 @@ def process_gold_kurikulum():
     # ===============================
 
     (
-        df.writeTo(f"{ICEBERG_NAMESPACE}.gold.gold_kurikulum")
+        df.writeTo(f"{GOLD_CATALOG}.gold.gold_kurikulum")
         .using("iceberg")
         .createOrReplace()
     )

@@ -6,18 +6,21 @@ from backend.gold.gold_prodi import process_gold_program_studi
 from backend.gold.gold_kurikulum import process_gold_kurikulum
 
 from backend.spark.session import get_spark
-from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.settings import ICEBERG_NAMESPACE, DATA_DIR
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Katalog HMS-backed agar tabel terlihat oleh Trino
+GOLD_CATALOG = "hive_iceberg"
 
 
 def _validate_star_schema():
 
     spark = get_spark("TugasAkhirNita - Gold Validation")
 
-    dim = spark.table(f"{ICEBERG_NAMESPACE}.gold.dim_mahasiswa")
-    fact = spark.table(f"{ICEBERG_NAMESPACE}.gold.fact_khs")
+    dim = spark.table(f"{GOLD_CATALOG}.gold.dim_mahasiswa")
+    fact = spark.table(f"{GOLD_CATALOG}.gold.fact_khs")
 
     print()
     print("=" * 88)
@@ -168,9 +171,10 @@ def process_gold():
     logger.info("Memulai Proses Gold Layer (Star Schema)")
     logger.info("=" * 60)
 
-    process_gold_dim_mahasiswa()
-
+    # fact_khs dibuat DULU karena dim_mahasiswa membutuhkannya
     process_gold_fact_khs()
+
+    process_gold_dim_mahasiswa()
 
     process_gold_program_studi()
 
@@ -178,8 +182,50 @@ def process_gold():
 
     result = _validate_star_schema()
 
+    # =====================================================
+    # Export hasil join ke Excel untuk pengecekan manual
+    # =====================================================
+
+    _export_gold_to_excel()
+
     logger.info("=" * 60)
     logger.info("Seluruh Gold Layer berhasil dibuat.")
     logger.info("=" * 60)
 
     return result
+
+
+def _export_gold_to_excel():
+    """Export dim_mahasiswa (hasil join KHS + mahasiswa) ke Excel."""
+
+    spark = get_spark("TugasAkhirNita - Gold Export")
+
+    logger.info("=" * 60)
+    logger.info("EXPORT GOLD KE EXCEL")
+    logger.info("=" * 60)
+
+    dim = spark.table(f"{GOLD_CATALOG}.gold.dim_mahasiswa")
+
+    row_count = dim.count()
+    logger.info(f"Rows dim_mahasiswa : {row_count}")
+
+    # Ambil kolom yang relevan untuk pengecekan manual
+    export_cols = [
+        "id_mahasiswa", "jenis_kelamin", "tanggal_masuk", "tanggal_keluar",
+        "ipk", "total_sks", "jumlah_mk", "status_mahasiswa",
+        "angkatan", "semester", "ip", "sks_seharusnya", "selisih_sks",
+        "lama_studi", "status_kelulusan", "label",
+    ]
+    # Pilih kolom yang ada
+    available = [c for c in export_cols if c in dim.columns]
+    df_export = dim.select(*available)
+
+    # Convert ke pandas lalu ke Excel
+    pandas_df = df_export.toPandas()
+
+    export_path = DATA_DIR / "gold_dim_mahasiswa_join.xlsx"
+    pandas_df.to_excel(export_path, index=False, engine="openpyxl")
+
+    logger.info(f"Exported ke : {export_path}")
+    logger.info(f"Total baris : {len(pandas_df)}")
+    logger.info("✓ Export Excel selesai.")

@@ -7,11 +7,11 @@ from backend.utils.logger import get_logger
 logger = get_logger(__name__)
 
 # ============================================================
-# Feature Store (8 fitur, sesuai baseline notebook)
+# Feature Store (9 fitur, sesuai baseline notebook + 1 tambahan)
 #
 # Sumber : Gold dim_mahasiswa (sudah wide: termasuk ip, sks dari fact_khs)
 # Fitur X: jk_enc, angkatan, ip, ipk, total_sks, jumlah_mk,
-#          sks_seharusnya, selisih_sks
+#          sks_seharusnya, selisih_sks, kecepatan_sks_per_semester
 # Label  : label (0=Tepat Waktu, 1=Terlambat)
 # ============================================================
 
@@ -24,6 +24,8 @@ FEATURE_X = [
     "jumlah_mk",
     "sks_seharusnya",
     "selisih_sks",
+    "kecepatan_sks_per_semester",
+    "IPK_kategori",
 ]
 
 # Fitur yang DILARANG masuk ke X (data leakage).
@@ -39,7 +41,9 @@ FORBIDDEN_FEATURES = [
     "label",
 ]
 
-DIM_TABLE = f"{ICEBERG_NAMESPACE}.gold.dim_mahasiswa"
+# Katalog HMS-backed agar tabel terlihat oleh Trino
+FE_CATALOG = "hive_iceberg"
+DIM_TABLE = f"{FE_CATALOG}.gold.dim_mahasiswa"
 
 
 def join_gold_dataset():
@@ -86,6 +90,7 @@ def derive_features(df):
     """
     Turunkan fitur tambahan dari kolom Gold:
       - jk_enc: encoding jenis_kelamin (P/PEREMPUAN=0, L/LAKI-LAKI=1)
+      - kecepatan_sks_per_semester: total_sks / semester (dibulatkan 2 desimal)
 
     Kolom lain (angkatan, semester, sks_seharusnya, selisih_sks, lama_studi,
     status_kelulusan, label) sudah ada di Gold dim_mahasiswa.
@@ -106,6 +111,36 @@ def derive_features(df):
         ),
     )
 
+    # kecepatan_sks_per_semester: total_sks / semester
+    # Handle division by 0 atau semester NULL -> NULL (bukan error)
+    df = df.withColumn(
+        "kecepatan_sks_per_semester",
+        F.when(
+            (F.col("semester").isNull()) | (F.col("semester") == 0),
+            F.lit(None).cast("double"),
+        ).otherwise(
+            F.round(F.col("total_sks") / F.col("semester"), 2)
+        ),
+    )
+
+    return df
+
+
+def derive_ipk_kategori(df):
+    """
+    Membuat fitur kategorikal IPK_kategori dari IPK:
+      - ipk < 3.00  -> 0 (Rendah)
+      - ipk 3.00-3.50 -> 1 (Sedang)
+      - ipk > 3.50  -> 2 (Tinggi)
+    IPK NULL -> NULL
+    """
+    df = df.withColumn(
+        "IPK_kategori",
+        F.when(F.col("ipk").isNull(), F.lit(None).cast("integer"))
+        .when(F.col("ipk") < 3.00, F.lit(0))
+        .when(F.col("ipk") <= 3.50, F.lit(1))
+        .otherwise(F.lit(2)),
+    )
     return df
 
 

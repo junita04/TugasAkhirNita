@@ -1,0 +1,718 @@
+[
+  {
+    "schema": "bronze",
+    "table": "data_kelas",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:01:32.463Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:01:32.463Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-24T03:47:43.526Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_kelas_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:20.215Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:20.215Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_khs",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:01:55.497Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:01:55.497Z",
+        "n_meta": 5
+      },
+      "spark": {
+        "last_modified": "2026-09-24T03:48:06.624Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_khs_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:21.744Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:21.744Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_kurikulum",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:01:43.763Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:01:43.763Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-24T03:47:55.091Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_kurikulum_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:20.911Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:20.911Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_program_studi",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:01:21.207Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:01:21.207Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-24T03:47:32.185Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_program_studi_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:16.57Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:16.57Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_referensi_mahasiswa",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:01:09.45Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:01:09.45Z",
+        "n_meta": 4
+      },
+      "spark": {
+        "last_modified": "2026-09-24T03:47:20.552Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "bronze",
+    "table": "data_referensi_mahasiswa_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:14.68Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:14.68Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "feature_store_graduation_prediction",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-08-27T03:42:34.11Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T03:42:34.11Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_dataset",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T06:16:51.294Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T06:16:51.294Z",
+        "n_meta": 10
+      },
+      "spark": {
+        "last_modified": "2026-09-04T07:59:49.956Z",
+        "n_meta": 12
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_dataset_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T07:40:49.991Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T07:40:49.991Z",
+        "n_meta": 4
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_dataset_v2",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-11T05:44:00.535Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-11T05:44:00.535Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_mahasiswa_aktif",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-08-27T04:17:32.755Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T04:17:32.755Z",
+        "n_meta": 3
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_result",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T08:45:00.402Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T08:45:00.402Z",
+        "n_meta": 26
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_result_new",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T09:20:30.5Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T09:20:30.5Z",
+        "n_meta": 26
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "prediction_comparison",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-02T03:43:50.199Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-02T03:43:50.199Z",
+        "n_meta": 112
+      },
+      "spark": {
+        "last_modified": "2026-09-02T02:47:26.463Z",
+        "n_meta": 63
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "prediction_result_with_smote",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-02T05:21:55.339Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-02T05:21:55.339Z",
+        "n_meta": 192
+      },
+      "spark": {
+        "last_modified": "2026-09-02T02:46:58.087Z",
+        "n_meta": 63
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "prediction_result_without_smote",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-02T05:18:06.785Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-02T05:18:06.785Z",
+        "n_meta": 256
+      },
+      "spark": {
+        "last_modified": "2026-09-02T02:46:25.768Z",
+        "n_meta": 63
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_dataset",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T06:16:46.584Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T06:16:46.584Z",
+        "n_meta": 10
+      },
+      "spark": {
+        "last_modified": "2026-09-04T07:59:49.426Z",
+        "n_meta": 12
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_dataset_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T07:40:49.499Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T07:40:49.499Z",
+        "n_meta": 4
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_dataset_v2",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-11T05:43:55.557Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-11T05:43:55.557Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_dataset_v2_fe",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-11T05:44:01.528Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-11T05:44:01.528Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_kelulusan",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-08-27T04:17:31.559Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T04:17:31.559Z",
+        "n_meta": 3
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "classification_report",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-08-27T04:28:28.59Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T04:28:28.59Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "classification_report_final",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-02T09:17:05.003Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-02T09:17:05.003Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "confusion_matrix",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-08-27T04:28:27.88Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T04:28:27.88Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "confusion_matrix_final",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-02T09:17:04.498Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-02T09:17:04.498Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "data_referensi_mahasiswa",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-08-27T03:42:32.361Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T03:42:32.361Z",
+        "n_meta": 3
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "dim_mahasiswa",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T05:17:45.141Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T05:17:45.141Z",
+        "n_meta": 7
+      },
+      "spark": {
+        "last_modified": "2026-09-02T08:05:12.2Z",
+        "n_meta": 12
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "dim_mahasiswa_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:53.871Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:53.871Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "fact_khs",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T05:17:42.348Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T05:17:42.348Z",
+        "n_meta": 6
+      },
+      "spark": {
+        "last_modified": "2026-09-02T08:05:05.731Z",
+        "n_meta": 11
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "fact_khs_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:48.225Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:48.225Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "gold_kurikulum",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T05:17:49.145Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T05:17:49.145Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-02T05:09:35.045Z",
+        "n_meta": 7
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "gold_mahasiswa_lama",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-08-24T08:00:49.769Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-08-24T08:00:49.769Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "gold_program_studi",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T05:17:48.757Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T05:17:48.757Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-02T05:09:34.564Z",
+        "n_meta": 7
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "inference_result_model_utama",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-10-02T07:45:11.854Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-10-02T07:45:11.854Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "inference_result_model_utama-d7664e4b37b94b3c99788f1b8604546f",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-10-02T07:40:17.277Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-10-02T07:40:17.277Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "model_metrics",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-08-27T04:28:26.731Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T04:28:26.731Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "model_metrics_final",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-02T09:17:05.533Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-02T09:17:05.533Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "model_predictions",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-02T09:16:03.864Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T04:28:30.785Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-02T09:16:03.864Z",
+        "n_meta": 6
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "model_predictions_v2",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-11T05:44:02.408Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-11T05:44:02.408Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "prediction_by_angkatan",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-08-27T04:28:29.342Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-08-27T04:28:29.342Z",
+        "n_meta": 1
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "prediction_by_angkatan_final",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-02T09:17:03.94Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-02T09:17:03.94Z",
+        "n_meta": 4
+      }
+    }
+  },
+  {
+    "schema": "gold",
+    "table": "prediction_by_angkatan_v2",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-11T05:44:05.86Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-11T05:44:05.86Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "silver",
+    "table": "silver_kelas",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:07:26.967Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:07:26.967Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-02T08:04:55.026Z",
+        "n_meta": 8
+      }
+    }
+  },
+  {
+    "schema": "silver",
+    "table": "silver_khs",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:07:25.521Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:07:25.521Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-02T08:04:53.433Z",
+        "n_meta": 7
+      }
+    }
+  },
+  {
+    "schema": "silver",
+    "table": "silver_khs_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:36.93Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:36.93Z",
+        "n_meta": 2
+      }
+    }
+  },
+  {
+    "schema": "silver",
+    "table": "silver_kurikulum",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:07:27.614Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:07:27.614Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-02T08:04:55.724Z",
+        "n_meta": 8
+      }
+    }
+  },
+  {
+    "schema": "silver",
+    "table": "silver_mahasiswa",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:07:22.219Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:07:22.219Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-02T08:04:49.987Z",
+        "n_meta": 7
+      }
+    }
+  },
+  {
+    "schema": "silver",
+    "table": "silver_program_studi",
+    "preferred_style": "hive_db",
+    "preferred_last_modified": "2026-09-24T04:07:26.289Z",
+    "locations": {
+      "hive_db": {
+        "last_modified": "2026-09-24T04:07:26.289Z",
+        "n_meta": 1
+      },
+      "spark": {
+        "last_modified": "2026-09-02T08:04:54.237Z",
+        "n_meta": 8
+      }
+    }
+  },
+  {
+    "schema": "silver",
+    "table": "silver_referensi_mahasiswa_fix",
+    "preferred_style": "spark",
+    "preferred_last_modified": "2026-09-04T06:55:35.578Z",
+    "locations": {
+      "spark": {
+        "last_modified": "2026-09-04T06:55:35.578Z",
+        "n_meta": 2
+      }
+    }
+  }
+]

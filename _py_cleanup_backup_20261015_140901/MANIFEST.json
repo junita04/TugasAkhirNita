@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-10-15T14:09:01",
+  "scope": "Kategori C audit -> file yang terbukti aman dihapus (Python cleanup lanjutan)",
+  "method": {
+    "references_checked": "seluruh file .py, DAG Airflow, Dockerfile, docker-compose, entrypoint (.sh), config, docs, dan docker.backup",
+    "exclusion": "tidak menyentuh data, tabel Iceberg, file model (.joblib), metadata, dataset, konfigurasi, maupun file pemulihan",
+    "deletion_rule": "hanya file tanpa referensi apa pun, bukan bagian recovery/operasional, dan (a) terbukti mati terhadap API terkini, atau (b) diagnostik read-only sekali pakai"
+  },
+  "files": [
+    {
+      "path": "scripts/run_full_pipeline.py",
+      "reason": "Runner generasi lama, terbukti mati",
+      "evidence": "from backend.ml.evaluate import run_ml_pipeline; backend/ml/evaluate.py gagal diimpor (ImportError: cannot import name 'extract_model' from backend.ml.train). 0 referensi lain."
+    },
+    {
+      "path": "scripts/run_ml_training.py",
+      "reason": "Runner generasi lama, terbukti mati",
+      "evidence": "from backend.ml.evaluate import run_ml_pipeline (evaluate.py ImportError 'extract_model'). 0 referensi lain."
+    },
+    {
+      "path": "scripts/run_inference.py",
+      "reason": "Runner generasi lama, signature usang",
+      "evidence": "memanggil backend.ml.inference.run_inference(smoke_test=False); signature terkini run_inference(model_name='model_a_utama') -> TypeError unexpected keyword. 0 referensi lain."
+    },
+    {
+      "path": "scripts/run_ml_inference.py",
+      "reason": "Runner generasi lama, impor simbol tidak ada",
+      "evidence": "from backend.ml.inference import run_inference, print_report; print_report TIDAK didefinisikan di backend.ml.inference (ada di backend.ml.iceberg_output) -> ImportError. 0 referensi lain."
+    },
+    {
+      "path": "scripts/test_inference_dataset.py",
+      "reason": "Test usang, signature berubah",
+      "evidence": "create_inference_dataset() dipanggil tanpa argumen; signature terkini create_inference_dataset(joined) -> TypeError. 0 referensi lain."
+    },
+    {
+      "path": "scripts/check_data.py",
+      "reason": "Diagnostik read-only sekali pakai",
+      "evidence": "peek pandas training xlsx (9 baris). 0 referensi. Tidak menulis apa pun."
+    },
+    {
+      "path": "scripts/check_data2.py",
+      "reason": "Diagnostik read-only sekali pakai",
+      "evidence": "peek pandas inference xlsx (12 baris). 0 referensi. Tidak menulis apa pun."
+    },
+    {
+      "path": "scripts/check_data_detail.py",
+      "reason": "Diagnostik read-only sekali pakai",
+      "evidence": "detail statistik training xlsx (read-only). 0 referensi."
+    },
+    {
+      "path": "scripts/check_inference_detail.py",
+      "reason": "Diagnostik read-only sekali pakai",
+      "evidence": "detail statistik inference xlsx (read-only). 0 referensi."
+    },
+    {
+      "path": "scripts/compare_training_files.py",
+      "reason": "Diagnostik read-only sekali pakai",
+      "evidence": "bandingkan hash/skema beberapa xlsx lama (read-only). 0 referensi."
+    },
+    {
+      "path": "scripts/verify_data.py",
+      "reason": "Diagnostik read-only sekali pakai",
+      "evidence": "cek skema kolom training/inference xlsx (read-only). 0 referensi."
+    },
+    {
+      "path": "scripts/verify_split.py",
+      "reason": "Diagnostik read-only sekali pakai",
+      "evidence": "verifikasi split 80/20 dengan angka ekspektasi hardcoded (read-only). 0 referensi."
+    },
+    {
+      "path": "scripts/get_mc_url.py",
+      "reason": "Utilitas sekali pakai",
+      "evidence": "mengambil URL unduhan minio mc dari GitHub API. 0 referensi. Tidak terkait sistem/TA."
+    }
+  ],
+  "not_deleted_deliberately": [
+    "backend/ml/evaluate.py (direferensikan DAG training_pipeline.py)",
+    "backend/ml/registry.py (direferensikan evaluate.py)",
+    "docker/airflow/dags/training_pipeline.py (DAG, tidak dipensiunkan tanpa keputusan)",
+    "scripts/test_data_preparation.py, scripts/test_evaluate.py, scripts/test_train.py (dirujuk docs/ALUR_PENGERJAAN.md)",
+    "scripts/run_full_pipeline_final.py, scripts/run_iceberg_test.py (orchestrator lama, perlu keputusan)",
+    "seluruh skrip recovery/operasional/dashboard dan test lain"
+  ]
+}

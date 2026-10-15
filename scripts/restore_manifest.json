@@ -1,0 +1,373 @@
+[
+  {
+    "schema": "bronze",
+    "table": "data_kelas",
+    "location": "s3://warehouse/iceberg/bronze.db/data_kelas",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:01:32.463Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_kelas_fix",
+    "location": "s3://warehouse/iceberg/bronze/data_kelas_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:20.215Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_khs",
+    "location": "s3://warehouse/iceberg/bronze.db/data_khs",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:01:55.497Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_khs_fix",
+    "location": "s3://warehouse/iceberg/bronze/data_khs_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:21.744Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_kurikulum",
+    "location": "s3://warehouse/iceberg/bronze.db/data_kurikulum",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:01:43.763Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_kurikulum_fix",
+    "location": "s3://warehouse/iceberg/bronze/data_kurikulum_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:20.911Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_program_studi",
+    "location": "s3://warehouse/iceberg/bronze.db/data_program_studi",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:01:21.207Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_program_studi_fix",
+    "location": "s3://warehouse/iceberg/bronze/data_program_studi_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:16.57Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_referensi_mahasiswa",
+    "location": "s3://warehouse/iceberg/bronze.db/data_referensi_mahasiswa",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:01:09.45Z"
+  },
+  {
+    "schema": "bronze",
+    "table": "data_referensi_mahasiswa_fix",
+    "location": "s3://warehouse/iceberg/bronze/data_referensi_mahasiswa_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:14.68Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "feature_store_graduation_prediction",
+    "location": "s3://warehouse/iceberg/feature_store.db/feature_store_graduation_prediction",
+    "style": "hive_db",
+    "last_modified": "2026-08-27T03:42:34.11Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_dataset",
+    "location": "s3://warehouse/iceberg/feature_store.db/inference_dataset",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T06:16:51.294Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_dataset_fix",
+    "location": "s3://warehouse/iceberg/feature_store/inference_dataset_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T07:40:49.991Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_dataset_v2",
+    "location": "s3://warehouse/iceberg/feature_store.db/inference_dataset_v2",
+    "style": "hive_db",
+    "last_modified": "2026-09-11T05:44:00.535Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_mahasiswa_aktif",
+    "location": "s3://warehouse/iceberg/feature_store.db/inference_mahasiswa_aktif",
+    "style": "hive_db",
+    "last_modified": "2026-08-27T04:17:32.755Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_result",
+    "location": "s3://warehouse/iceberg/feature_store.db/inference_result",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T08:45:00.402Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "inference_result_new",
+    "location": "s3://warehouse/iceberg/feature_store.db/inference_result_new",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T09:20:30.5Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "prediction_comparison",
+    "location": "s3://warehouse/iceberg/feature_store.db/prediction_comparison",
+    "style": "hive_db",
+    "last_modified": "2026-09-02T03:43:50.199Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "prediction_result_with_smote",
+    "location": "s3://warehouse/iceberg/feature_store.db/prediction_result_with_smote",
+    "style": "hive_db",
+    "last_modified": "2026-09-02T05:21:55.339Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "prediction_result_without_smote",
+    "location": "s3://warehouse/iceberg/feature_store.db/prediction_result_without_smote",
+    "style": "hive_db",
+    "last_modified": "2026-09-02T05:18:06.785Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_dataset",
+    "location": "s3://warehouse/iceberg/feature_store.db/training_dataset",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T06:16:46.584Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_dataset_fix",
+    "location": "s3://warehouse/iceberg/feature_store/training_dataset_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T07:40:49.499Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_dataset_v2",
+    "location": "s3://warehouse/iceberg/feature_store.db/training_dataset_v2",
+    "style": "hive_db",
+    "last_modified": "2026-09-11T05:43:55.557Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_dataset_v2_fe",
+    "location": "s3://warehouse/iceberg/feature_store.db/training_dataset_v2_fe",
+    "style": "hive_db",
+    "last_modified": "2026-09-11T05:44:01.528Z"
+  },
+  {
+    "schema": "feature_store",
+    "table": "training_kelulusan",
+    "location": "s3://warehouse/iceberg/feature_store.db/training_kelulusan",
+    "style": "hive_db",
+    "last_modified": "2026-08-27T04:17:31.559Z"
+  },
+  {
+    "schema": "gold",
+    "table": "classification_report",
+    "location": "s3://warehouse/iceberg/gold.db/classification_report",
+    "style": "hive_db",
+    "last_modified": "2026-08-27T04:28:28.59Z"
+  },
+  {
+    "schema": "gold",
+    "table": "classification_report_final",
+    "location": "s3://warehouse/iceberg/gold/classification_report_final",
+    "style": "spark",
+    "last_modified": "2026-09-02T09:17:05.003Z"
+  },
+  {
+    "schema": "gold",
+    "table": "confusion_matrix",
+    "location": "s3://warehouse/iceberg/gold.db/confusion_matrix",
+    "style": "hive_db",
+    "last_modified": "2026-08-27T04:28:27.88Z"
+  },
+  {
+    "schema": "gold",
+    "table": "confusion_matrix_final",
+    "location": "s3://warehouse/iceberg/gold/confusion_matrix_final",
+    "style": "spark",
+    "last_modified": "2026-09-02T09:17:04.498Z"
+  },
+  {
+    "schema": "gold",
+    "table": "data_referensi_mahasiswa",
+    "location": "s3://warehouse/iceberg/gold.db/data_referensi_mahasiswa",
+    "style": "hive_db",
+    "last_modified": "2026-08-27T03:42:32.361Z"
+  },
+  {
+    "schema": "gold",
+    "table": "dim_mahasiswa",
+    "location": "s3://warehouse/iceberg/gold.db/dim_mahasiswa",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T05:17:45.141Z"
+  },
+  {
+    "schema": "gold",
+    "table": "dim_mahasiswa_fix",
+    "location": "s3://warehouse/iceberg/gold/dim_mahasiswa_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:53.871Z"
+  },
+  {
+    "schema": "gold",
+    "table": "fact_khs",
+    "location": "s3://warehouse/iceberg/gold.db/fact_khs",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T05:17:42.348Z"
+  },
+  {
+    "schema": "gold",
+    "table": "fact_khs_fix",
+    "location": "s3://warehouse/iceberg/gold/fact_khs_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:48.225Z"
+  },
+  {
+    "schema": "gold",
+    "table": "gold_kurikulum",
+    "location": "s3://warehouse/iceberg/gold.db/gold_kurikulum",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T05:17:49.145Z"
+  },
+  {
+    "schema": "gold",
+    "table": "gold_mahasiswa_lama",
+    "location": "s3://warehouse/iceberg/gold/gold_mahasiswa_lama",
+    "style": "spark",
+    "last_modified": "2026-08-24T08:00:49.769Z"
+  },
+  {
+    "schema": "gold",
+    "table": "gold_program_studi",
+    "location": "s3://warehouse/iceberg/gold.db/gold_program_studi",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T05:17:48.757Z"
+  },
+  {
+    "schema": "gold",
+    "table": "inference_result_model_utama",
+    "location": "s3://warehouse/iceberg/gold.db/inference_result_model_utama",
+    "style": "hive_db",
+    "last_modified": "2026-10-02T07:45:11.854Z"
+  },
+  {
+    "schema": "gold",
+    "table": "inference_result_model_utama-d7664e4b37b94b3c99788f1b8604546f",
+    "location": "s3://warehouse/iceberg/gold.db/inference_result_model_utama-d7664e4b37b94b3c99788f1b8604546f",
+    "style": "hive_db",
+    "last_modified": "2026-10-02T07:40:17.277Z"
+  },
+  {
+    "schema": "gold",
+    "table": "model_metrics",
+    "location": "s3://warehouse/iceberg/gold.db/model_metrics",
+    "style": "hive_db",
+    "last_modified": "2026-08-27T04:28:26.731Z"
+  },
+  {
+    "schema": "gold",
+    "table": "model_metrics_final",
+    "location": "s3://warehouse/iceberg/gold/model_metrics_final",
+    "style": "spark",
+    "last_modified": "2026-09-02T09:17:05.533Z"
+  },
+  {
+    "schema": "gold",
+    "table": "model_predictions",
+    "location": "s3://warehouse/iceberg/gold/model_predictions",
+    "style": "spark",
+    "last_modified": "2026-09-02T09:16:03.864Z"
+  },
+  {
+    "schema": "gold",
+    "table": "model_predictions_v2",
+    "location": "s3://warehouse/iceberg/gold.db/model_predictions_v2",
+    "style": "hive_db",
+    "last_modified": "2026-09-11T05:44:02.408Z"
+  },
+  {
+    "schema": "gold",
+    "table": "prediction_by_angkatan",
+    "location": "s3://warehouse/iceberg/gold.db/prediction_by_angkatan",
+    "style": "hive_db",
+    "last_modified": "2026-08-27T04:28:29.342Z"
+  },
+  {
+    "schema": "gold",
+    "table": "prediction_by_angkatan_final",
+    "location": "s3://warehouse/iceberg/gold/prediction_by_angkatan_final",
+    "style": "spark",
+    "last_modified": "2026-09-02T09:17:03.94Z"
+  },
+  {
+    "schema": "gold",
+    "table": "prediction_by_angkatan_v2",
+    "location": "s3://warehouse/iceberg/gold.db/prediction_by_angkatan_v2",
+    "style": "hive_db",
+    "last_modified": "2026-09-11T05:44:05.86Z"
+  },
+  {
+    "schema": "silver",
+    "table": "silver_kelas",
+    "location": "s3://warehouse/iceberg/silver.db/silver_kelas",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:07:26.967Z"
+  },
+  {
+    "schema": "silver",
+    "table": "silver_khs",
+    "location": "s3://warehouse/iceberg/silver.db/silver_khs",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:07:25.521Z"
+  },
+  {
+    "schema": "silver",
+    "table": "silver_khs_fix",
+    "location": "s3://warehouse/iceberg/silver/silver_khs_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:36.93Z"
+  },
+  {
+    "schema": "silver",
+    "table": "silver_kurikulum",
+    "location": "s3://warehouse/iceberg/silver.db/silver_kurikulum",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:07:27.614Z"
+  },
+  {
+    "schema": "silver",
+    "table": "silver_mahasiswa",
+    "location": "s3://warehouse/iceberg/silver.db/silver_mahasiswa",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:07:22.219Z"
+  },
+  {
+    "schema": "silver",
+    "table": "silver_program_studi",
+    "location": "s3://warehouse/iceberg/silver.db/silver_program_studi",
+    "style": "hive_db",
+    "last_modified": "2026-09-24T04:07:26.289Z"
+  },
+  {
+    "schema": "silver",
+    "table": "silver_referensi_mahasiswa_fix",
+    "location": "s3://warehouse/iceberg/silver/silver_referensi_mahasiswa_fix",
+    "style": "spark",
+    "last_modified": "2026-09-04T06:55:35.578Z"
+  }
+]

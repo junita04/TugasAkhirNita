@@ -80,26 +80,34 @@ def run_feature_store():
     print(f"  row multiplication: {join_report['row_multiplication']}")
 
     print()
-    print("# TRAINING DATASET (label IS NOT NULL)")
-    print(f"  jumlah awal labeled: {training_report['jumlah_awal_labeled']}")
-    print(f"  IP NULL dikeluarkan: {training_report['jumlah_ip_null_dikeluarkan']}")
-    print(f"  jumlah valid       : {training_report['jumlah_valid']}")
-    print(f"  label 0 Tepat Waktu: {training_report['label_0_tepat_waktu']}")
-    print(f"  label 1 Terlambat  : {training_report['label_1_terlambat']}")
-    print(f"  duplicate ID       : {training_report['duplicate_id']}")
-    print(f"  leakage            : forbidden={training_report['leakage_forbidden']} "
+    print("# TRAINING DATASET (ANGKATAN 2012-2021)")
+    print(f"  jumlah awal 2012-2021 : {training_report['jumlah_awal_angkatan_2012_2021']}")
+    print(f"  jumlah lulus          : {training_report['jumlah_lulus']}")
+    print(f"  aktif → label=1      : {training_report['jumlah_aktif_dilabeli_1']}")
+    print(f"  IP NULL dikeluarkan  : {training_report['jumlah_ip_null_dikeluarkan']}")
+    print(f"  jumlah valid         : {training_report['jumlah_valid']}")
+    print(f"  label 0 Tepat Waktu  : {training_report['label_0_tepat_waktu']}")
+    print(f"  label 1 Terlambat    : {training_report['label_1_terlambat']}")
+    print(f"  duplicate ID         : {training_report['duplicate_id']}")
+    print(f"  leakage              : forbidden={training_report['leakage_forbidden']} "
           f"extra={training_report['leakage_extra']}")
+    if "angkatan_distribution" in training_report:
+        for a, c in sorted(training_report["angkatan_distribution"].items()):
+            print(f"    Angkatan {a}: {c}")
 
     print()
-    print("# INFERENCE DATASET (AKTIF 2022-2024)")
-    print(f"  jumlah awal AKTIF  : {inference_report['jumlah_awal_aktif_2022_2024']}")
-    print(f"  IP NULL dikeluarkan: {inference_report['jumlah_ip_null_dikeluarkan']}")
-    print(f"  jumlah valid       : {inference_report['jumlah_valid']}")
-    print(f"  duplicate ID       : {inference_report['duplicate_id']}")
-    print(f"  leakage            : forbidden={inference_report['leakage_forbidden']} "
+    print("# INFERENCE DATASET (ANGKATAN 2022-2024, AKTIF + LULUS)")
+    print(f"  jumlah awal 2022-2024 : {inference_report['jumlah_awal_angkatan_2022_2024']}")
+    print(f"  jumlah aktif          : {inference_report['jumlah_aktif']}")
+    print(f"  jumlah lulus          : {inference_report['jumlah_lulus']}")
+    print(f"  IP NULL dikeluarkan  : {inference_report['jumlah_ip_null_dikeluarkan']}")
+    print(f"  jumlah valid         : {inference_report['jumlah_valid']}")
+    print(f"  duplicate ID         : {inference_report['duplicate_id']}")
+    print(f"  leakage              : forbidden={inference_report['leakage_forbidden']} "
           f"extra={inference_report['leakage_extra']}")
-    if "rekonciliasi" in inference_report:
-        print(f"  rekonciliasi       : {inference_report['rekonciliasi']}")
+    if "angkatan_distribution" in inference_report:
+        for a, c in sorted(inference_report["angkatan_distribution"].items()):
+            print(f"    Angkatan {a}: {c}")
 
     print()
     print("# FEATURE SCHEMA (X)")

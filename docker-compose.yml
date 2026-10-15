@@ -112,6 +112,8 @@ services:
     mem_limit: 1g
     memswap_limit: 1280m
     environment:
+      # true = lewati schematool (schema sudah ada); mencegah init ulang yang
+      # berujung pada hilangnya registrasi tabel saat container recreate.
       IS_RESUME: "true"
       # Kredensial dipakai oleh hive-site.xml (${env:...}). Default mengikuti
       # .env; boleh diubah tanpa meng-edit file konfigurasi.
@@ -133,7 +135,7 @@ services:
       - "9083:9083"
     networks: [lakehouse]
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9083 || exit 1"]
+      test: ["CMD-SHELL", "timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/9083' && echo OK || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 30
@@ -151,6 +153,8 @@ services:
     environment:
       SPARK_MASTER_HOST: spark-master
       SPARK_MASTER_PORT: 7077
+      PYSPARK_PYTHON: /usr/bin/python3.11
+      PYSPARK_DRIVER_PYTHON: /usr/bin/python3.11
     ports:
       - "8080:8080"
       - "7077:7077"
@@ -176,6 +180,8 @@ services:
       SPARK_MASTER_URL: spark://spark-master:7077
       SPARK_WORKER_MEMORY: 1536m
       SPARK_WORKER_CORES: 2
+      PYSPARK_PYTHON: /usr/bin/python3.11
+      PYSPARK_DRIVER_PYTHON: /usr/bin/python3.11
     ports:
       - "8081:8081"
     volumes:
@@ -197,6 +203,8 @@ services:
     command: /opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer
     environment:
       SPARK_HISTORY_OPTS: "-Dspark.history.fs.logDirectory=file:///spark-events"
+      PYSPARK_PYTHON: /usr/bin/python3.11
+      PYSPARK_DRIVER_PYTHON: /usr/bin/python3.11
     ports:
       - "18081:18080"
     volumes:
@@ -210,11 +218,10 @@ services:
   # 7. Trino (SQL Engine -> Superset)
   # ============================================================
   trino:
-    image: trinodb/trino:462
+    image: trinodb/trino:467
     profiles: [trino]
-    mem_limit: 3g
+    mem_limit: 4g
     environment:
-      # Dipakai oleh catalog/iceberg.properties ($ENV{...}).
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin-password}
       S3_REGION: ${S3_REGION:-us-east-1}
@@ -290,8 +297,8 @@ services:
   airflow-scheduler:
     build:
       context: ./docker/airflow
-    mem_limit: 2g
-    memswap_limit: 2560m
+    mem_limit: 4g
+    memswap_limit: 4544m
     profiles: [airflow]
     restart: unless-stopped
     dns:
@@ -314,7 +321,7 @@ services:
       S3_PATH_STYLE_ACCESS: "true"
       POSTGRES_ENABLED: "false"
       SPARK_JARS_DIR: /opt/airflow/jars
-      SPARK_DRIVER_MEMORY: 768m
+      SPARK_DRIVER_MEMORY: 1g
       SPARK_EXECUTOR_MEMORY: 512m
       SPARK_EXECUTOR_CORES: "1"
       AIRFLOW__SCHEDULER__SCHEDULER_ZOMBIE_TASK_THRESHOLD: "1200"
@@ -460,6 +467,8 @@ services:
     ports:
       - "8088:8088"
     command: ["/bin/sh", "-c", "gunicorn --bind 0.0.0.0:8088 --workers 2 --timeout 120 'superset.app:create_app()'"]
+    volumes:
+      - ./docker/superset/custom_static:/app/superset/static/custom:ro
     networks: [lakehouse]
 
   superset-worker:

@@ -64,4 +64,34 @@
         <name>fs.s3a.impl</name>
         <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
     </property>
+
+    <!-- ============================================= -->
+    <!-- Kompatibilitas hadoop-aws 3.3.4 vs hadoop-common 3.4.1 -->
+    <!-- core-default.xml hadoop-common 3.4.1 memakai format durasi ("60s", "30s", "64K"), sedangkan hadoop-aws 3.3.4 membaca key berikut sebagai angka polos (longOption/intOption/getLong) sehingga NumberFormatException saat inisialisasi S3A. -->
+    <!-- ============================================= -->
+    <property>
+        <name>fs.s3a.threads.keepalivetime</name>
+        <value>60</value>
+    </property>
+    <property>
+        <name>fs.s3a.connection.establish.timeout</name>
+        <value>50000</value>
+    </property>
+    <property>
+        <name>fs.s3a.connection.timeout</name>
+        <value>200000</value>
+    </property>
+    <property>
+        <name>fs.s3a.multipart.purge.age</name>
+        <value>86400</value>
+    </property>
+    <property>
+        <name>fs.s3a.readahead.range</name>
+        <value>65536</value>
+    </property>
+    <!-- Daftar provider default di core-default 3.4.1 merujuk kelas AWS SDK v2 (software.amazon.awssdk) yang tidak ada di classpath; pakai provider bawaan hadoop-aws 3.3.4 saja. -->
+    <property>
+        <name>fs.s3a.aws.credentials.provider</name>
+        <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+    </property>
 </configuration>

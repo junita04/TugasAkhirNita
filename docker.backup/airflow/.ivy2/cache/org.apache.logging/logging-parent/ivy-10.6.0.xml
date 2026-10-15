@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="2.0" xmlns:m="http://ant.apache.org/ivy/maven">
+	<info organisation="org.apache.logging"
+		module="logging-parent"
+		revision="10.6.0"
+		status="release"
+		publication="20240111101557"
+	>
+		<license name="Apache-2.0" url="https://www.apache.org/licenses/LICENSE-2.0.txt" />
+		<description homepage="https://logging.apache.org/logging-parent">
+		Parent project internally used in Maven-based projects of the Apache Logging Services
+		</description>
+		<m:properties__maven.compiler.release>8</m:properties__maven.compiler.release>
+		<m:properties__version.apache-rat-plugin>0.16</m:properties__version.apache-rat-plugin>
+		<m:properties__xml-maven-plugin.version>1.1.0</m:properties__xml-maven-plugin.version>
+		<m:properties__spotbugs-annotations.version>4.8.3</m:properties__spotbugs-annotations.version>
+		<m:properties__bnd-baseline-maven-plugin.version>7.0.0</m:properties__bnd-baseline-maven-plugin.version>
+		<m:properties__bnd-maven-plugin.version>7.0.0</m:properties__bnd-maven-plugin.version>
+		<m:properties__bnd-extra-package-options/>
+		<m:properties__findsecbugs-plugin.version>1.12.0</m:properties__findsecbugs-plugin.version>
+		<m:properties__bnd-jpms-module-info>$[bnd-module-name];access=0</m:properties__bnd-jpms-module-info>
+		<m:properties__flatten-maven-plugin.version>1.5.0</m:properties__flatten-maven-plugin.version>
+		<m:properties__osgi.annotation.version>8.1.0</m:properties__osgi.annotation.version>
+		<m:properties__asciidoctor-maven-plugin.version>2.2.4</m:properties__asciidoctor-maven-plugin.version>
+		<m:properties__jspecify.version>0.3.0</m:properties__jspecify.version>
+		<m:properties__osgi.annotation.bundle.version>2.0.0</m:properties__osgi.annotation.bundle.version>
+		<m:properties__osgi.annotation.versioning.version>1.1.2</m:properties__osgi.annotation.versioning.version>
+		<m:properties__log4j-changelog-maven-plugin.version>0.7.0</m:properties__log4j-changelog-maven-plugin.version>
+		<m:properties__bnd.annotation.version>7.0.0</m:properties__bnd.annotation.version>
+		<m:properties__error-prone.version>2.24.1</m:properties__error-prone.version>
+		<m:properties__sbom.xslt>&lt;xsl:stylesheet version=&quot;1.0&quot;
+    xmlns:xsl=&quot;http://www.w3.org/1999/XSL/Transform&quot;
+    xmlns=&quot;http://cyclonedx.org/schema/bom/1.5&quot;
+    xmlns:xalan=&quot;http://xml.apache.org/xalan&quot;
+    xmlns:cdx14=&quot;http://cyclonedx.org/schema/bom/1.4&quot;
+    xmlns:cdx15=&quot;http://cyclonedx.org/schema/bom/1.5&quot;
+    exclude-result-prefixes=&quot;xalan cdx14 cdx15&quot;>
+
+  &lt;xsl:param name=&quot;sbom.serialNumber&quot;/>
+  &lt;xsl:param name=&quot;vdr.url&quot;/>
+  &lt;xsl:output method=&quot;xml&quot;
+              version=&quot;1.0&quot;
+              encoding=&quot;UTF-8&quot;
+              indent=&quot;yes&quot;
+              xalan:indent-amount=&quot;2&quot;
+              xalan:line-separator=&quot;&amp;#10;&quot;/>
+
+  &lt;!-- Fixes the license formatting -->
+  &lt;xsl:template match=&quot;/&quot;>
+    &lt;xsl:text>&amp;#10;&lt;/xsl:text>
+    &lt;xsl:apply-templates />
+  &lt;/xsl:template>
+
+  &lt;!-- Standard copy template -->
+  &lt;xsl:template match=&quot;@*|node()&quot;>
+    &lt;xsl:copy>
+      &lt;xsl:apply-templates select=&quot;@*&quot; />
+      &lt;xsl:apply-templates />
+    &lt;/xsl:copy>
+  &lt;/xsl:template>
+
+  &lt;!-- Bump the SBOM schema version from `1.4` to `1.5` -->
+  &lt;xsl:template match=&quot;cdx14:*&quot;>
+    &lt;xsl:element name=&quot;{local-name()}&quot; namespace=&quot;http://cyclonedx.org/schema/bom/1.5&quot;>
+      &lt;xsl:apply-templates select=&quot;@*&quot; />
+      &lt;xsl:apply-templates />
+    &lt;/xsl:element>
+  &lt;/xsl:template>
+
+  &lt;!-- Add the SBOM `serialNumber` -->
+  &lt;xsl:template match=&quot;cdx14:bom&quot;>
+    &lt;bom>
+      &lt;xsl:attribute name=&quot;version&quot;>
+        &lt;xsl:value-of select=&quot;1&quot;/>
+      &lt;/xsl:attribute>
+      &lt;xsl:attribute name=&quot;serialNumber&quot;>
+        &lt;xsl:text>urn:uuid:&lt;/xsl:text>
+        &lt;xsl:value-of select=&quot;$sbom.serialNumber&quot;/>
+      &lt;/xsl:attribute>
+      &lt;xsl:apply-templates />
+    &lt;/bom>
+  &lt;/xsl:template>
+
+  &lt;!-- Add the link to the VDR -->
+  &lt;xsl:template match=&quot;cdx14:externalReferences[starts-with(preceding-sibling::cdx14:group, &apos;org.apache.logging&apos;)]&quot;>
+    &lt;externalReferences>
+      &lt;xsl:apply-templates/>
+      &lt;reference>
+        &lt;xsl:attribute name=&quot;type&quot;>vulnerability-assertion&lt;/xsl:attribute>
+        &lt;url>
+          &lt;xsl:value-of select=&quot;$vdr.url&quot;/>
+        &lt;/url>
+      &lt;/reference>
+    &lt;/externalReferences>
+  &lt;/xsl:template>
+
+&lt;/xsl:stylesheet></m:properties__sbom.xslt>
+		<m:properties__minimalJavaBuildVersion>[17,18)</m:properties__minimalJavaBuildVersion>
+		<m:properties__bnd-bundle-symbolicname>$[project.groupId].$[subst;$[subst;$[project.artifactId];log4j-];[^A-Za-z0-9];.]</m:properties__bnd-bundle-symbolicname>
+		<m:properties__palantir-java-format.version>2.39.0</m:properties__palantir-java-format.version>
+		<m:properties__beanshell-maven-plugin.version>1.4</m:properties__beanshell-maven-plugin.version>
+		<m:properties__vdr.url>https://logging.apache.org/cyclonedx/vdr.xml</m:properties__vdr.url>
+		<m:properties__maven.compiler.source>8</m:properties__maven.compiler.source>
+		<m:properties__bnd-extra-config/>
+		<m:properties__build-helper-maven-plugin.version>3.5.0</m:properties__build-helper-maven-plugin.version>
+		<m:properties__maven-artifact-plugin.version>3.5.0</m:properties__maven-artifact-plugin.version>
+		<m:properties__minimalMavenBuildVersion>3.8.1</m:properties__minimalMavenBuildVersion>
+		<m:properties__org.eclipse.jgit.version>6.8.0.202311291450-r</m:properties__org.eclipse.jgit.version>
+		<m:properties__bnd-module-name>$[Bundle-SymbolicName]</m:properties__bnd-module-name>
+		<m:properties__revision>10.6.0</m:properties__revision>
+		<m:properties__spotbugs-maven-plugin.version>4.8.2.0</m:properties__spotbugs-maven-plugin.version>
+		<m:properties__spotless-maven-plugin.version>2.41.1</m:properties__spotless-maven-plugin.version>
+		<m:properties__maven.compiler.target>8</m:properties__maven.compiler.target>
+		<m:properties__bnd-multi-release>false</m:properties__bnd-multi-release>
+		<m:properties__project.build.outputTimestamp>2024-01-11T10:10:48Z</m:properties__project.build.outputTimestamp>
+		<m:properties__bnd-extra-module-options/>
+		<m:properties__cyclonedx-maven-plugin.version>2.7.10</m:properties__cyclonedx-maven-plugin.version>
+		<m:properties__sign-maven-plugin.version>1.0.1</m:properties__sign-maven-plugin.version>
+		<m:properties__restrict-imports-enforcer-rule.version>2.4.0</m:properties__restrict-imports-enforcer-rule.version>
+		<m:properties__distMgmtReleasesUrl>https://repository.apache.org/service/local/staging/deploy/maven2</m:properties__distMgmtReleasesUrl>
+		<m:properties__version.maven-plugin-tools>${maven.plugin.tools.version}</m:properties__version.maven-plugin-tools>
+		<m:properties__distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</m:properties__distMgmtSnapshotsUrl>
+		<m:properties__version.maven-deploy-plugin>3.1.1</m:properties__version.maven-deploy-plugin>
+		<m:properties__sourceReleaseAssemblyDescriptor>source-release</m:properties__sourceReleaseAssemblyDescriptor>
+		<m:properties__organization.logo>https://www.apache.org/images/asf_logo_wide_2016.png</m:properties__organization.logo>
+		<m:properties__version.maven-compiler-plugin>3.11.0</m:properties__version.maven-compiler-plugin>
+		<m:properties__version.maven-gpg-plugin>3.1.0</m:properties__version.maven-gpg-plugin>
+		<m:properties__version.maven-enforcer-plugin>3.4.1</m:properties__version.maven-enforcer-plugin>
+		<m:properties__distMgmtSnapshotsName>Apache Development Snapshot Repository</m:properties__distMgmtSnapshotsName>
+		<m:properties__version.maven-scm-publish-plugin>3.2.1</m:properties__version.maven-scm-publish-plugin>
+		<m:properties__version.apache-resource-bundles>1.5</m:properties__version.apache-resource-bundles>
+		<m:properties__distMgmtReleasesName>Apache Release Distribution Repository</m:properties__distMgmtReleasesName>
+		<m:properties__maven.plugin.tools.version>3.10.2</m:properties__maven.plugin.tools.version>
+		<m:properties__version.checksum-maven-plugin>1.11</m:properties__version.checksum-maven-plugin>
+		<m:properties__version.maven-clean-plugin>3.3.2</m:properties__version.maven-clean-plugin>
+		<m:properties__version.maven-site-plugin>3.12.1</m:properties__version.maven-site-plugin>
+		<m:properties__version.maven-release-plugin>3.0.1</m:properties__version.maven-release-plugin>
+		<m:properties__gpg.useagent>true</m:properties__gpg.useagent>
+		<m:properties__version.maven-surefire>${surefire.version}</m:properties__version.maven-surefire>
+		<m:properties__version.maven-project-info-reports-plugin>3.4.5</m:properties__version.maven-project-info-reports-plugin>
+		<m:properties__version.maven-help-plugin>3.4.0</m:properties__version.maven-help-plugin>
+		<m:properties__version.maven-source-plugin>3.3.0</m:properties__version.maven-source-plugin>
+		<m:properties__version.maven-ear-plugin>3.3.0</m:properties__version.maven-ear-plugin>
+		<m:properties__surefire.version>3.2.2</m:properties__surefire.version>
+		<m:properties__version.maven-shade-plugin>3.5.1</m:properties__version.maven-shade-plugin>
+		<m:properties__project.build.sourceEncoding>UTF-8</m:properties__project.build.sourceEncoding>
+		<m:properties__version.maven-invoker-plugin>3.6.0</m:properties__version.maven-invoker-plugin>
+		<m:properties__assembly.tarLongFileMode>posix</m:properties__assembly.tarLongFileMode>
+		<m:properties__version.maven-remote-resources-plugin>3.1.0</m:properties__version.maven-remote-resources-plugin>
+		<m:properties__version.maven-war-plugin>3.4.0</m:properties__version.maven-war-plugin>
+		<m:properties__version.maven-fluido-skin>1.11.2</m:properties__version.maven-fluido-skin>
+		<m:properties__version.maven-assembly-plugin>3.6.0</m:properties__version.maven-assembly-plugin>
+		<m:properties__version.maven-resources-plugin>3.3.1</m:properties__version.maven-resources-plugin>
+		<m:properties__project.reporting.outputEncoding>UTF-8</m:properties__project.reporting.outputEncoding>
+		<m:properties__version.maven-jar-plugin>3.3.0</m:properties__version.maven-jar-plugin>
+		<m:properties__version.maven-checkstyle-plugin>3.3.1</m:properties__version.maven-checkstyle-plugin>
+		<m:properties__version.maven-scm-plugin>2.0.1</m:properties__version.maven-scm-plugin>
+		<m:properties__version.maven-dependency-plugin>3.6.1</m:properties__version.maven-dependency-plugin>
+		<m:properties__version.maven-javadoc-plugin>3.6.2</m:properties__version.maven-javadoc-plugin>
+		<m:properties__version.maven-antrun-plugin>3.1.0</m:properties__version.maven-antrun-plugin>
+		<m:properties__version.maven-install-plugin>3.1.1</m:properties__version.maven-install-plugin>
+		<m:dependency.management__org.apache.maven.plugin-tools__maven-plugin-annotations__version>3.10.2</m:dependency.management__org.apache.maven.plugin-tools__maven-plugin-annotations__version>
+		<m:maven.plugins>org.apache.maven.plugins__maven-remote-resources-plugin__null|org.apache.maven.plugins__maven-enforcer-plugin__null|org.apache.maven.plugins__maven-site-plugin__null|org.apache.maven.plugins__maven-remote-resources-plugin__null|org.apache.maven.plugins__maven-enforcer-plugin__null|org.apache.maven.plugins__maven-site-plugin__null|org.codehaus.mojo__flatten-maven-plugin__null|null__maven-clean-plugin__null|null__maven-compiler-plugin__null|null__maven-failsafe-plugin__null|null__maven-surefire-plugin__null|org.cyclonedx__cyclonedx-maven-plugin__null|com.github.genthaler__beanshell-maven-plugin__null|null__maven-enforcer-plugin__null|com.github.spotbugs__spotbugs-maven-plugin__null|org.apache.rat__apache-rat-plugin__null|com.diffplug.spotless__spotless-maven-plugin__null|org.codehaus.mojo__build-helper-maven-plugin__null|biz.aQute.bnd__bnd-maven-plugin__null|null__maven-jar-plugin__null|biz.aQute.bnd__bnd-baseline-maven-plugin__null</m:maven.plugins>
+		<m:dependency.management__biz.aQute.bnd__biz.aQute.bnd.annotation__version>7.0.0</m:dependency.management__biz.aQute.bnd__biz.aQute.bnd.annotation__version>
+		<m:dependency.management__com.github.spotbugs__spotbugs-annotations__version>4.8.3</m:dependency.management__com.github.spotbugs__spotbugs-annotations__version>
+		<m:dependency.management__org.jspecify__jspecify__version>0.3.0</m:dependency.management__org.jspecify__jspecify__version>
+		<m:dependency.management__org.osgi__osgi.annotation__version>8.1.0</m:dependency.management__org.osgi__osgi.annotation__version>
+		<m:dependency.management__org.osgi__org.osgi.annotation.bundle__version>2.0.0</m:dependency.management__org.osgi__org.osgi.annotation.bundle__version>
+		<m:dependency.management__org.osgi__org.osgi.annotation.versioning__version>1.1.2</m:dependency.management__org.osgi__org.osgi.annotation.versioning__version>
+	</info>
+	<configurations>
+		<conf name="default" visibility="public" description="runtime dependencies and master artifact can be used with this conf" extends="runtime,master"/>
+		<conf name="master" visibility="public" description="contains only the artifact published by this module itself, with no transitive dependencies"/>
+		<conf name="compile" visibility="public" description="this is the default scope, used if none is specified. Compile dependencies are available in all classpaths."/>
+		<conf name="provided" visibility="public" description="this is much like compile, but indicates you expect the JDK or a container to provide it. It is only available on the compilation classpath, and is not transitive."/>
+		<conf name="runtime" visibility="public" description="this scope indicates that the dependency is not required for compilation, but is for execution. It is in the runtime and test classpaths, but not the compile classpath." extends="compile"/>
+		<conf name="test" visibility="public" description="this scope indicates that the dependency is not required for normal use of the application, and is only available for the test compilation and execution phases." extends="runtime"/>
+		<conf name="system" visibility="public" description="this scope is similar to provided except that you have to provide the JAR which contains it explicitly. The artifact is always available and is not looked up in a repository."/>
+		<conf name="sources" visibility="public" description="this configuration contains the source artifact of this module, if any."/>
+		<conf name="javadoc" visibility="public" description="this configuration contains the javadoc artifact of this module, if any."/>
+		<conf name="optional" visibility="public" description="contains all optional dependencies"/>
+	</configurations>
+	<publications>
+	</publications>
+</ivy-module>

@@ -10,6 +10,9 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Katalog HMS-backed agar tabel terlihat oleh Trino
+SILVER_CATALOG = "hive_iceberg"
+
 # ============================================================
 # Spesifikasi Silver per sumber Bronze.
 #   bronze_table -> (silver_table, peta kolom sumber -> target)
@@ -97,7 +100,7 @@ def _trim_string_columns(df):
 
 
 def _table_exists(spark, table_name):
-    tables = spark.sql(f"SHOW TABLES IN {ICEBERG_NAMESPACE}.bronze")
+    tables = spark.sql(f"SHOW TABLES IN {SILVER_CATALOG}.bronze")
     return any(row.tableName == table_name for row in tables.collect())
 
 
@@ -253,7 +256,7 @@ def process_table(table_name: str):
     logger.info(f"Processing : {table_name} -> {silver_name}")
     logger.info("=" * 60)
 
-    df = spark.table(f"{ICEBERG_NAMESPACE}.bronze.{table_name}")
+    df = spark.table(f"{SILVER_CATALOG}.bronze.{table_name}")
 
     logger.info(f"Rows Bronze : {df.count()}")
 
@@ -274,7 +277,7 @@ def process_table(table_name: str):
     elif table_name == "data_khs":
         df = process_khs(df, report)
 
-    df.writeTo(f"{ICEBERG_NAMESPACE}.silver.{silver_name}") \
+    df.writeTo(f"{SILVER_CATALOG}.silver.{silver_name}") \
         .using("iceberg") \
         .createOrReplace()
 
@@ -300,19 +303,19 @@ def build_quality_report(reports):
     )
 
     if mahasiswa_report and khs_report:
-        ref_ids = spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_mahasiswa") \
+        ref_ids = spark.table(f"{SILVER_CATALOG}.silver.silver_mahasiswa") \
             .select("id_mahasiswa").distinct().count()
-        khs_ids = spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_khs") \
+        khs_ids = spark.table(f"{SILVER_CATALOG}.silver.silver_khs") \
             .select("id_mahasiswa").distinct().count()
 
         ref_all = set(
             row[0]
-            for row in spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_mahasiswa")
+            for row in spark.table(f"{SILVER_CATALOG}.silver.silver_mahasiswa")
             .select("id_mahasiswa").collect()
         )
         khs_all = set(
             row[0]
-            for row in spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_khs")
+            for row in spark.table(f"{SILVER_CATALOG}.silver.silver_khs")
             .select("id_mahasiswa").collect()
         )
 

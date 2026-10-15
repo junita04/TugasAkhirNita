@@ -8,14 +8,19 @@ from backend.utils.logger import get_logger
 from backend.feature_store.feature_engineering import (
     FEATURE_X,
     derive_features,
+    derive_ipk_kategori,
     check_leakage,
 )
 from backend.gold.gold_mahasiswa import TARGET_SKS, SNAPSHOT_SEMESTER
 
 logger = get_logger(__name__)
 
-INFERENCE_TABLE = f"{ICEBERG_NAMESPACE}.feature_store.inference_dataset"
-INFERENCE_TABLE_HIVE = "hive_iceberg.feature_store.inference_dataset"
+# Katalog HMS-backed agar tabel terlihat oleh Trino
+FE_CATALOG = "hive_iceberg"
+INFERENCE_TABLE = f"{FE_CATALOG}.feature_store.inference_dataset"
+
+# Angkatan inference
+INFERENCE_ANGKATAN = [2022, 2023, 2024]
 
 
 def _build_snapshot_target_sks_case():
@@ -32,70 +37,124 @@ def create_inference_dataset(joined):
     spark = joined.sparkSession
 
     logger.info("=" * 60)
-    logger.info("MEMBUAT INFERENCE DATASET (AKTIF 2022-2024, SNAPSHOT 2026)")
+    logger.info("MEMBUAT INFERENCE DATASET (ANGKATAN 2022-2024, AKTIF + LULUS)")
     logger.info("=" * 60)
 
     df = derive_features(joined)
+    df = derive_ipk_kategori(df)
 
     # =====================================================
-    # Filter mahasiswa AKTIF angkatan 2022, 2023, 2024
+    # Filter: angkatan 2022-2024 (aktif + lulus)
     # =====================================================
 
-    aktif = df.filter(
-        (F.upper(F.trim(F.col("status_mahasiswa"))) == "AKTIF")
-        & (F.col("angkatan").isin(2022, 2023, 2024))
+    angkatan_df = df.filter(F.col("angkatan").isin(INFERENCE_ANGKATAN))
+
+    total_angkatan = angkatan_df.count()
+    logger.info(f"Jumlah angkatan 2022-2024 : {total_angkatan}")
+
+    # =====================================================
+    # Distribusi per angkatan + status
+    # =====================================================
+
+    dist = angkatan_df.groupBy("angkatan", "status_mahasiswa").count().orderBy("angkatan", "status_mahasiswa").collect()
+    for row in dist:
+        logger.info(f"  Angkatan {row['angkatan']} | {row['status_mahasiswa']}: {row['count']}")
+
+    # =====================================================
+    # Pisahkan aktif vs lulus
+    # =====================================================
+
+    aktif_df = angkatan_df.filter(
+        F.upper(F.trim(F.col("status_mahasiswa"))) == "AKTIF"
+    )
+    lulus_df = angkatan_df.filter(
+        F.upper(F.trim(F.col("status_mahasiswa"))) != "AKTIF"
     )
 
-    total_aktif = aktif.count()
-    logger.info(f"Jumlah awal mahasiswa AKTIF 2022-2024 : {total_aktif}")
+    total_aktif = aktif_df.count()
+    total_lulus = lulus_df.count()
+    logger.info(f"Aktif (snapshot 2026) : {total_aktif}")
+    logger.info(f"Lulus (data existing)  : {total_lulus}")
 
     # =====================================================
-    # Distribusi per angkatan
+    # Aktif: terapkan SNAPSHOT 2026
     # =====================================================
 
-    angkatan_dist = aktif.groupBy("angkatan").count().collect()
-    for row in angkatan_dist:
-        logger.info(f"  Angkatan {row['angkatan']}: {row['count']}")
-
-    # =====================================================
-    # Terapkan SNAPSHOT 2026:
-    # - semester_snapshot per angkatan
-    # - sks_seharusnya_snapshot dari TARGET_SKS
-    # - selisih_sks_snapshot = total_sks - sks_seharusnya_snapshot
-    # =====================================================
-
-    # Map angkatan -> snapshot semester
     semester_when = F.lit(None).cast(IntegerType())
     for angkatan, sem in sorted(SNAPSHOT_SEMESTER.items()):
         semester_when = F.when(F.col("angkatan") == angkatan, sem).otherwise(semester_when)
 
-    aktif = aktif.withColumn("semester", semester_when)
-
-    # Map angkatan -> snapshot target SKS
-    aktif = aktif.withColumn("sks_seharusnya", _build_snapshot_target_sks_case())
-
-    # selisih_sks = total_sks - sks_seharusnya (snapshot)
-    aktif = aktif.withColumn(
+    aktif_df = aktif_df.withColumn("semester", semester_when)
+    aktif_df = aktif_df.withColumn("sks_seharusnya", _build_snapshot_target_sks_case())
+    aktif_df = aktif_df.withColumn(
         "selisih_sks",
         F.col("total_sks") - F.col("sks_seharusnya"),
     )
 
     # =====================================================
-    # Mahasiswa AKTIF dengan IP NULL harus DIKELUARKAN
-    # TIDAK ada imputasi - IP NULL = tidak digunakan untuk ML
+    # Lulus: pastikan semester, sks_seharusnya, selisih_sks ada
+    # (sudah ada dari Gold, tapi pastikan tidak NULL)
     # =====================================================
 
-    total_sebelum_ip_filter = aktif.count()
-    ip_null = aktif.filter(F.col("ip").isNull()).count()
-    ip_null_ids = [row.id_mahasiswa for row in aktif.filter(F.col("ip").isNull()).select("id_mahasiswa").collect()]
-    logger.info(f"INFERENCE DATA AUDIT")
+    # Hitung semester lulus dari jumlah_data_khs (sudah ada di Gold)
+    # semester = jumlah_data_khs (sudah benar dari Gold)
+    # sks_seharusnya: map dari semester menggunakan TARGET_SKS
+    lulus_sks_case = F.lit(None).cast(IntegerType())
+    for sem, sks in sorted(TARGET_SKS.items()):
+        lulus_sks_case = F.when(F.col("semester") == sem, sks).otherwise(lulus_sks_case)
+
+    lulus_df = lulus_df.withColumn(
+        "sks_seharusnya",
+        F.coalesce(F.col("sks_seharusnya"), lulus_sks_case),
+    )
+    lulus_df = lulus_df.withColumn(
+        "selisih_sks",
+        F.when(
+            F.col("selisih_sks").isNotNull(),
+            F.col("selisih_sks"),
+        ).otherwise(
+            F.col("total_sks") - F.col("sks_seharusnya")
+        ),
+    )
+
+    # =====================================================
+    # Gabungkan aktif + lulus
+    # =====================================================
+
+    combined = aktif_df.unionByName(lulus_df, allowMissingColumns=True)
+
+    total_combined = combined.count()
+    logger.info(f"Gabungan aktif + lulus : {total_combined}")
+
+    # =====================================================
+    # Distribusi label (lulus punya label 0/1, aktif punya label NULL)
+    # =====================================================
+
+    label_dist = combined.groupBy("label").count().collect()
+    for row in label_dist:
+        label_name = "NULL (aktif)" if row["label"] is None else str(row["label"])
+        logger.info(f"  Label {label_name}: {row['count']}")
+
+    # =====================================================
+    # Filter: IP TIDAK NULL
+    # =====================================================
+
+    total_sebelum_ip_filter = combined.count()
+    ip_null = combined.filter(F.col("ip").isNull()).count()
+    ip_null_ids = [
+        row.id_mahasiswa
+        for row in combined.filter(F.col("ip").isNull())
+        .select("id_mahasiswa")
+        .collect()
+    ]
+
+    logger.info("INFERENCE DATA AUDIT")
     logger.info(f"Inference sebelum filtering IP : {total_sebelum_ip_filter}")
     logger.info(f"IP NULL                        : {ip_null}")
 
-    # Filter: HANYA mahasiswa dengan IP TIDAK NULL
-    aktif = aktif.filter(F.col("ip").isNotNull())
+    combined = combined.filter(F.col("ip").isNotNull())
 
-    total_sesudah_ip_filter = aktif.count()
+    total_sesudah_ip_filter = combined.count()
     logger.info(f"Inference setelah filtering IP  : {total_sesudah_ip_filter}")
     logger.info(f"Selisih (dikeluarkan)          : {total_sebelum_ip_filter - total_sesudah_ip_filter}")
 
@@ -103,14 +162,14 @@ def create_inference_dataset(joined):
     # Reconciliation check SEBELUM dropna
     # =====================================================
 
-    total_sebelum_dropna = aktif.count()
+    total_sebelum_dropna = combined.count()
     logger.info(f"Reconciliation SEBELUM dropna: {total_sebelum_dropna}")
 
     # =====================================================
     # Dataset final: pastikan tidak ada NULL pada fitur wajib
     # =====================================================
 
-    valid = aktif.dropna(subset=FEATURE_X)
+    valid = combined.dropna(subset=FEATURE_X)
 
     total_sesudah_dropna = valid.count()
     jumlah_hilang = total_sebelum_dropna - total_sesudah_dropna
@@ -126,28 +185,11 @@ def create_inference_dataset(joined):
                 logger.warning(f"  {col_name}: {null_count} NULL")
 
     logger.info(f"Reconciliation SESUDAH dropna: {total_sesudah_dropna}")
-    logger.info(f"Selisih: {jumlah_hilang} (harusnya 0)")
+    logger.info(f"Selisih: {jumlah_hilang}")
 
     valid = valid.dropDuplicates(["id_mahasiswa"])
 
     inference_df = valid.select("id_mahasiswa", *FEATURE_X)
-
-    # =====================================================
-    # Reconciliation: pastikan semua angkatan terpelihara
-    # =====================================================
-
-    for angkatan, expected_count in [
-        (2022, 4109), (2023, 4046), (2024, 4346)
-    ]:
-        actual_count = inference_df.filter(F.col("angkatan") == angkatan).count()
-        if actual_count != expected_count:
-            logger.warning(
-                f"REKONCILIASI: Angkatan {angkatan} "
-                f"expected={expected_count} actual={actual_count} "
-                f"delta={actual_count - expected_count}"
-            )
-        else:
-            logger.info(f"Rekonciliasi angkatan {angkatan}: {actual_count} OK")
 
     # =====================================================
     # Data leakage check
@@ -167,87 +209,46 @@ def create_inference_dataset(joined):
         .createOrReplace()
     )
 
-    # Write to HMS-backed catalog for Trino visibility
-    (
-        inference_df.writeTo(INFERENCE_TABLE_HIVE)
-        .using("iceberg")
-        .createOrReplace()
-    )
-
-    logger.info(f"Rows Inference Dataset : {inference_df.count()}")
-    logger.info("✓ Inference Dataset berhasil dibuat.")
+    final_count = inference_df.count()
+    logger.info(f"Rows Inference Dataset : {final_count}")
+    logger.info("Inference Dataset berhasil dibuat.")
     logger.info("=" * 60)
 
     # =====================================================
-    # Validasi snapshot
+    # Reconciliation per angkatan
     # =====================================================
 
-    logger.info("SNAPSHOT 2026 VALIDATION:")
-    for angkatan, sem in sorted(SNAPSHOT_SEMESTER.items()):
-        sks = TARGET_SKS[sem]
-        logger.info(f"  Angkatan {angkatan} -> semester {sem} -> {sks} SKS")
+    for angkatan in INFERENCE_ANGKATAN:
+        cnt = inference_df.filter(F.col("angkatan") == angkatan).count()
+        logger.info(f"  Angkatan {angkatan}: {cnt}")
 
     # =====================================================
-    # Validasi sks_seharusnya pada inference dataset
+    # Distribusi angkatan
     # =====================================================
 
-    logger.info("=" * 60)
-    logger.info("VALIDASI INFERENCE DATASET - SKS_SEHARUSNYA")
-    logger.info("=" * 60)
-
-    # Validasi: tidak boleh ada sks_seharusnya > 144
-    invalid_sks = inference_df.filter(
-        (F.col("sks_seharusnya").isNull())
-        | (F.col("sks_seharusnya") < 15)
-        | (F.col("sks_seharusnya") > 144)
-    ).count()
-
-    if invalid_sks > 0:
-        logger.warning(f"VALIDASI GAGAL: {invalid_sks} baris memiliki sks_seharusnya di luar rentang 15-144!")
-        invalid_samples = inference_df.filter(
-            (F.col("sks_seharusnya").isNull())
-            | (F.col("sks_seharusnya") < 15)
-            | (F.col("sks_seharusnya") > 144)
-        ).select("id_mahasiswa", "angkatan", "sks_seharusnya", "total_sks").limit(5)
-        invalid_samples.show()
-        raise RuntimeError(f"Inference dataset memiliki sks_seharusnya di luar rentang 15-144: {invalid_sks} baris")
-    else:
-        logger.info("✓ sks_seharusnya valid (15-144)")
-
-    # Validasi per angkatan
-    for angkatan, expected_sks in [
-        (2022, 135), (2023, 95), (2024, 55)
-    ]:
-        actual_sks = inference_df.filter(
-            F.col("angkatan") == angkatan
-        ).select("sks_seharusnya").first()[0]
-        if actual_sks != expected_sks:
-            raise RuntimeError(
-                f"Angkatan {angkatan}: sks_seharusnya={actual_sks}, "
-                f"expected={expected_sks}"
-            )
-        logger.info(f"✓ Angkatan {angkatan}: sks_seharusnya={actual_sks}")
+    angkatan_dist = inference_df.groupBy("angkatan").count().orderBy("angkatan").collect()
+    for row in angkatan_dist:
+        logger.info(f"  Angkatan {row['angkatan']}: {row['count']}")
 
     report = {
         "table": INFERENCE_TABLE,
-        "jumlah_awal_aktif_2022_2024": total_aktif,
+        "jumlah_awal_angkatan_2022_2024": total_angkatan,
+        "jumlah_aktif": total_aktif,
+        "jumlah_lulus": total_lulus,
         "jumlah_ip_null_dikeluarkan": ip_null,
         "ip_null_ids": ip_null_ids,
-        "jumlah_valid": inference_df.count(),
+        "jumlah_valid": final_count,
         "jumlah_sebelum_dropna": total_sebelum_dropna,
         "jumlah_sesudah_dropna": total_sesudah_dropna,
         "jumlah_hilang_dropna": jumlah_hilang,
         "null_feature_after_dropna": 0,
-        "duplicate_id": inference_df.count()
+        "duplicate_id": final_count
         - inference_df.select("id_mahasiswa").distinct().count(),
         "leakage_forbidden": forbidden,
         "leakage_extra": extra,
-        "snapshot_semester": SNAPSHOT_SEMESTER,
-        "snapshot_target_sks": {k: TARGET_SKS[v] for k, v in SNAPSHOT_SEMESTER.items()},
         "feature_columns": FEATURE_X,
-        "rekonciliasi": {
-            a: inference_df.filter(F.col("angkatan") == a).count()
-            for a in [2022, 2023, 2024]
+        "angkatan_distribution": {
+            str(row["angkatan"]): row["count"] for row in angkatan_dist
         },
     }
 

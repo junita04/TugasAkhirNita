@@ -7,10 +7,10 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-GOLD_TABLE_DIM_HIVE = "hive_iceberg.gold.dim_mahasiswa"
-GOLD_TABLE_DIM = f"{ICEBERG_NAMESPACE}.gold.dim_mahasiswa"
-GOLD_TABLE_FACT = f"{ICEBERG_NAMESPACE}.gold.fact_khs"
-GOLD_TABLE_FACT_HIVE = "hive_iceberg.gold.fact_khs"
+# Katalog HMS-backed agar tabel terlihat oleh Trino
+GOLD_CATALOG = "hive_iceberg"
+GOLD_TABLE_DIM = f"{GOLD_CATALOG}.gold.dim_mahasiswa"
+GOLD_TABLE_FACT = f"{GOLD_CATALOG}.gold.fact_khs"
 
 # ============================================================
 # Target SKS per semester (dari baseline notebook)
@@ -55,7 +55,7 @@ def process_gold_dim_mahasiswa():
     # Membaca Silver Layer (sumber Gold HANYA dari Silver)
     # =====================================================
 
-    mahasiswa = spark.table(f"{ICEBERG_NAMESPACE}.silver.silver_mahasiswa")
+    mahasiswa = spark.table(f"{GOLD_CATALOG}.silver.silver_mahasiswa")
     khs = spark.table(GOLD_TABLE_FACT)
 
     logger.info(f"Rows Silver silver_mahasiswa : {mahasiswa.count()}")
@@ -140,28 +140,13 @@ def process_gold_dim_mahasiswa():
     )
 
     # =====================================================
-    # Simpan Gold (Iceberg, catalog ICEBERG_NAMESPACE)
+    # Simpan Gold (Iceberg, HMS-backed catalog)
     # =====================================================
 
     (
         df.writeTo(GOLD_TABLE_DIM)
         .using("iceberg")
         .createOrReplace()
-    )
-
-    # =====================================================
-    # Simpan ke HMS-backed catalog untuk Trino visibility
-    # =====================================================
-
-    (
-        df.writeTo(GOLD_TABLE_DIM_HIVE)
-        .using("iceberg")
-        .createOrReplace()
-    )
-
-    spark.sql(
-        f"ALTER TABLE {GOLD_TABLE_DIM} SET TBLPROPERTIES ('comment' = "
-        f"'Star Schema Dimension - Primary Key: id_mahasiswa (1 baris = 1 mahasiswa)')"
     )
 
     final_count = df.count()
