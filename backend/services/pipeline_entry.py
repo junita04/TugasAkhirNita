@@ -13,7 +13,7 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-DEFAULT_FILENAME = "(asli)req_data_rut (baru).xlsx"
+DEFAULT_FILENAME = "(asli)req_data_rut (baruu).xlsx"
 
 
 def resolve_pipeline_file(filename: str = DEFAULT_FILENAME) -> Path:

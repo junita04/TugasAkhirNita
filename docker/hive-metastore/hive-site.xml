@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- ============================================= -->
-    <!-- Koneksi ke Postgres (postgres-hive)           -->
-    <!-- ============================================= -->
+    <!-- ============================================================
+         STAGING ONLY - usulan hive-site.xml untuk HMS 3.1.3.
+         Bedanya dari produksi:
+           - ConnectionURL -> DB baru `metastore313` (skema 3.1.0),
+             TANPA menghapus/menimpa DB `metastore` yang lama.
+           - Properti kompatibilitas hadoop-aws 3.3.4 vs hadoop-common 3.4.1
+             dihapus karena image 3.1.3 memakai hadoop-common 3.1.x (durasi
+             default sudah berupa angka polos).
+         ============================================================ -->
     <property>
         <name>javax.jdo.option.ConnectionURL</name>
-        <value>jdbc:postgresql://postgres-hive:5432/metastore</value>
+        <value>jdbc:postgresql://postgres-hive:5432/metastore313</value>
     </property>
     <property>
         <name>javax.jdo.option.ConnectionDriverName</name>
@@ -20,9 +26,6 @@
         <value>${env:POSTGRES_HIVE_PASSWORD}</value>
     </property>
 
-    <!-- ============================================= -->
-    <!-- Konfigurasi standalone metastore              -->
-    <!-- ============================================= -->
     <property>
         <name>hive.metastore.schema.verification</name>
         <value>false</value>
@@ -64,32 +67,6 @@
         <name>fs.s3a.impl</name>
         <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
     </property>
-
-    <!-- ============================================= -->
-    <!-- Kompatibilitas hadoop-aws 3.3.4 vs hadoop-common 3.4.1 -->
-    <!-- core-default.xml hadoop-common 3.4.1 memakai format durasi ("60s", "30s", "64K"), sedangkan hadoop-aws 3.3.4 membaca key berikut sebagai angka polos (longOption/intOption/getLong) sehingga NumberFormatException saat inisialisasi S3A. -->
-    <!-- ============================================= -->
-    <property>
-        <name>fs.s3a.threads.keepalivetime</name>
-        <value>60</value>
-    </property>
-    <property>
-        <name>fs.s3a.connection.establish.timeout</name>
-        <value>50000</value>
-    </property>
-    <property>
-        <name>fs.s3a.connection.timeout</name>
-        <value>200000</value>
-    </property>
-    <property>
-        <name>fs.s3a.multipart.purge.age</name>
-        <value>86400</value>
-    </property>
-    <property>
-        <name>fs.s3a.readahead.range</name>
-        <value>65536</value>
-    </property>
-    <!-- Daftar provider default di core-default 3.4.1 merujuk kelas AWS SDK v2 (software.amazon.awssdk) yang tidak ada di classpath; pakai provider bawaan hadoop-aws 3.3.4 saja. -->
     <property>
         <name>fs.s3a.aws.credentials.provider</name>
         <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>

@@ -6,6 +6,7 @@ import pandas as pd
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.namespaces import ns
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -62,7 +63,8 @@ def _write_sheet(spark, file_path: Path, sheet: str, table_name: str):
     """
     # Gunakan hive_iceberg (HMS-backed) agar tabel terdaftar di Hive Metastore
     # dan terlihat oleh Trino (iceberg catalog = HIVE_METASTORE).
-    full_table = f"hive_iceberg.bronze.{table_name}"
+    # Namespace mengikuti PIPELINE_NS (produksi/QA).
+    full_table = f"{ns('bronze')}.{table_name}"
 
     df = (
         spark.read
@@ -197,6 +199,13 @@ def load_all_sheets_to_bronze(file_path: Path):
     if not_ingested:
         logger.warning(
             f"Sheet wajib tidak terbentuk (mungkin kosong/tidak ada): {sorted(not_ingested)}"
+        )
+
+    if failed_sheets:
+        raise RuntimeError(
+            "Bronze ingestion gagal untuk sheet: "
+            f"{failed_sheets}. Lihat log di atas untuk detail error. "
+            "Task dihentikan agar kegagalan tidak dianggap sukses."
         )
 
     return success_tables, skipped_sheets

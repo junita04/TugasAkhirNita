@@ -1,0 +1,83 @@
+{
+  "format-version" : 2,
+  "table-uuid" : "2e0cbd37-cf69-49ce-b25c-2fab154b3976",
+  "location" : "file:/opt/hive/data/warehouse/gold.db/training_label_distribution_by_angkatan-6f6a046a8d4b4f78a748eebcf1941cfc",
+  "last-sequence-number" : 1,
+  "last-updated-ms" : 1792040394377,
+  "last-column-id" : 3,
+  "current-schema-id" : 0,
+  "schemas" : [ {
+    "type" : "struct",
+    "schema-id" : 0,
+    "fields" : [ {
+      "id" : 1,
+      "name" : "angkatan",
+      "required" : false,
+      "type" : "int"
+    }, {
+      "id" : 2,
+      "name" : "label",
+      "required" : false,
+      "type" : "int"
+    }, {
+      "id" : 3,
+      "name" : "jumlah",
+      "required" : false,
+      "type" : "int"
+    } ]
+  } ],
+  "default-spec-id" : 0,
+  "partition-specs" : [ {
+    "spec-id" : 0,
+    "fields" : [ ]
+  } ],
+  "last-partition-id" : 999,
+  "default-sort-order-id" : 0,
+  "sort-orders" : [ {
+    "order-id" : 0,
+    "fields" : [ ]
+  } ],
+  "properties" : {
+    "write.format.default" : "PARQUET",
+    "write.parquet.compression-codec" : "zstd"
+  },
+  "current-snapshot-id" : 2626024398184547459,
+  "refs" : {
+    "main" : {
+      "snapshot-id" : 2626024398184547459,
+      "type" : "branch"
+    }
+  },
+  "snapshots" : [ {
+    "sequence-number" : 1,
+    "snapshot-id" : 2626024398184547459,
+    "timestamp-ms" : 1792040394377,
+    "summary" : {
+      "operation" : "append",
+      "trino_query_id" : "20261015_045953_00225_ej9yt",
+      "trino_user" : "root",
+      "added-data-files" : "1",
+      "added-records" : "17",
+      "added-files-size" : "630",
+      "changed-partition-count" : "1",
+      "total-records" : "17",
+      "total-files-size" : "630",
+      "total-data-files" : "1",
+      "total-delete-files" : "0",
+      "total-position-deletes" : "0",
+      "total-equality-deletes" : "0",
+      "engine-version" : "467",
+      "engine-name" : "trino",
+      "iceberg-version" : "Apache Iceberg 1.7.0 (commit 5f7c992ca673bf41df1d37543b24d646c24568a9)"
+    },
+    "manifest-list" : "file:/opt/hive/data/warehouse/gold.db/training_label_distribution_by_angkatan-6f6a046a8d4b4f78a748eebcf1941cfc/metadata/snap-2626024398184547459-1-ee41fcd6-ab32-4772-96a4-953a4ccea8f4.avro",
+    "schema-id" : 0
+  } ],
+  "statistics" : [ ],
+  "partition-statistics" : [ ],
+  "snapshot-log" : [ {
+    "timestamp-ms" : 1792040394377,
+    "snapshot-id" : 2626024398184547459
+  } ],
+  "metadata-log" : [ ]
+}

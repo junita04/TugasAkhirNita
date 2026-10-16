@@ -1,0 +1,240 @@
+{
+  "format-version" : 2,
+  "table-uuid" : "6ae8d3b2-b3e8-4fbf-8dd0-893c11017e81",
+  "location" : "file:/opt/hive/data/warehouse/gold.db/inference_result_model_a_utama-4053d948521f466da3c14112d17a56a0",
+  "last-sequence-number" : 3,
+  "last-updated-ms" : 1791189665020,
+  "last-column-id" : 8,
+  "current-schema-id" : 0,
+  "schemas" : [ {
+    "type" : "struct",
+    "schema-id" : 0,
+    "fields" : [ {
+      "id" : 1,
+      "name" : "id_mahasiswa",
+      "required" : false,
+      "type" : "string"
+    }, {
+      "id" : 2,
+      "name" : "ipk_kategori",
+      "required" : false,
+      "type" : "long"
+    }, {
+      "id" : 3,
+      "name" : "selisih_sks",
+      "required" : false,
+      "type" : "long"
+    }, {
+      "id" : 4,
+      "name" : "jk_enc",
+      "required" : false,
+      "type" : "long"
+    }, {
+      "id" : 5,
+      "name" : "kecepatan_sks_per_semester",
+      "required" : false,
+      "type" : "double"
+    }, {
+      "id" : 6,
+      "name" : "prob_tepat_waktu",
+      "required" : false,
+      "type" : "double"
+    }, {
+      "id" : 7,
+      "name" : "prob_terlambat",
+      "required" : false,
+      "type" : "double"
+    }, {
+      "id" : 8,
+      "name" : "prediksi",
+      "required" : false,
+      "type" : "long"
+    } ]
+  } ],
+  "default-spec-id" : 0,
+  "partition-specs" : [ {
+    "spec-id" : 0,
+    "fields" : [ ]
+  } ],
+  "last-partition-id" : 999,
+  "default-sort-order-id" : 0,
+  "sort-orders" : [ {
+    "order-id" : 0,
+    "fields" : [ ]
+  } ],
+  "properties" : {
+    "write.format.default" : "PARQUET",
+    "write.parquet.compression-codec" : "zstd"
+  },
+  "current-snapshot-id" : 5981085234246475373,
+  "refs" : {
+    "main" : {
+      "snapshot-id" : 5981085234246475373,
+      "type" : "branch"
+    }
+  },
+  "snapshots" : [ {
+    "sequence-number" : 1,
+    "snapshot-id" : 5393093493398652801,
+    "timestamp-ms" : 1791189664440,
+    "summary" : {
+      "operation" : "append",
+      "trino_query_id" : "20261005_084104_00097_3ndut",
+      "trino_user" : "airflow",
+      "changed-partition-count" : "0",
+      "total-records" : "0",
+      "total-files-size" : "0",
+      "total-data-files" : "0",
+      "total-delete-files" : "0",
+      "total-position-deletes" : "0",
+      "total-equality-deletes" : "0",
+      "engine-version" : "467",
+      "engine-name" : "trino",
+      "iceberg-version" : "Apache Iceberg 1.7.0 (commit 5f7c992ca673bf41df1d37543b24d646c24568a9)"
+    },
+    "manifest-list" : "file:/opt/hive/data/warehouse/gold.db/inference_result_model_a_utama-4053d948521f466da3c14112d17a56a0/metadata/snap-5393093493398652801-1-5804475f-9fc7-4cf4-bce0-81a1bdae3b71.avro",
+    "schema-id" : 0
+  }, {
+    "sequence-number" : 2,
+    "snapshot-id" : 8350389940873746239,
+    "parent-snapshot-id" : 5393093493398652801,
+    "timestamp-ms" : 1791189664635,
+    "summary" : {
+      "operation" : "append",
+      "trino_query_id" : "20261005_084105_00098_3ndut",
+      "trino_user" : "airflow",
+      "added-data-files" : "1",
+      "added-records" : "500",
+      "added-files-size" : "8329",
+      "changed-partition-count" : "1",
+      "total-records" : "500",
+      "total-files-size" : "8329",
+      "total-data-files" : "1",
+      "total-delete-files" : "0",
+      "total-position-deletes" : "0",
+      "total-equality-deletes" : "0",
+      "engine-version" : "467",
+      "engine-name" : "trino",
+      "iceberg-version" : "Apache Iceberg 1.7.0 (commit 5f7c992ca673bf41df1d37543b24d646c24568a9)"
+    },
+    "manifest-list" : "file:/opt/hive/data/warehouse/gold.db/inference_result_model_a_utama-4053d948521f466da3c14112d17a56a0/metadata/snap-8350389940873746239-1-07954386-7326-484f-b1b2-393ae6f0db98.avro",
+    "schema-id" : 0
+  }, {
+    "sequence-number" : 3,
+    "snapshot-id" : 5981085234246475373,
+    "parent-snapshot-id" : 8350389940873746239,
+    "timestamp-ms" : 1791189665020,
+    "summary" : {
+      "operation" : "append",
+      "trino_query_id" : "20261005_084105_00099_3ndut",
+      "trino_user" : "airflow",
+      "added-data-files" : "1",
+      "added-records" : "500",
+      "added-files-size" : "8120",
+      "changed-partition-count" : "1",
+      "total-records" : "1000",
+      "total-files-size" : "16449",
+      "total-data-files" : "2",
+      "total-delete-files" : "0",
+      "total-position-deletes" : "0",
+      "total-equality-deletes" : "0",
+      "engine-version" : "467",
+      "engine-name" : "trino",
+      "iceberg-version" : "Apache Iceberg 1.7.0 (commit 5f7c992ca673bf41df1d37543b24d646c24568a9)"
+    },
+    "manifest-list" : "file:/opt/hive/data/warehouse/gold.db/inference_result_model_a_utama-4053d948521f466da3c14112d17a56a0/metadata/snap-5981085234246475373-1-d463b128-d187-4427-a8b8-b5c7b5575ea3.avro",
+    "schema-id" : 0
+  } ],
+  "statistics" : [ {
+    "snapshot-id" : 8350389940873746239,
+    "statistics-path" : "file:/opt/hive/data/warehouse/gold.db/inference_result_model_a_utama-4053d948521f466da3c14112d17a56a0/metadata/20261005_084105_00098_3ndut-26ac31eb-5abb-445c-acd1-8ad9b8e23c27.stats",
+    "file-size-in-bytes" : 10273,
+    "file-footer-size-in-bytes" : 1568,
+    "blob-metadata" : [ {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 8350389940873746239,
+      "sequence-number" : 2,
+      "fields" : [ 1 ],
+      "properties" : {
+        "ndv" : "500"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 8350389940873746239,
+      "sequence-number" : 2,
+      "fields" : [ 2 ],
+      "properties" : {
+        "ndv" : "3"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 8350389940873746239,
+      "sequence-number" : 2,
+      "fields" : [ 3 ],
+      "properties" : {
+        "ndv" : "55"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 8350389940873746239,
+      "sequence-number" : 2,
+      "fields" : [ 4 ],
+      "properties" : {
+        "ndv" : "2"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 8350389940873746239,
+      "sequence-number" : 2,
+      "fields" : [ 5 ],
+      "properties" : {
+        "ndv" : "76"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 8350389940873746239,
+      "sequence-number" : 2,
+      "fields" : [ 6 ],
+      "properties" : {
+        "ndv" : "210"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 8350389940873746239,
+      "sequence-number" : 2,
+      "fields" : [ 7 ],
+      "properties" : {
+        "ndv" : "210"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 8350389940873746239,
+      "sequence-number" : 2,
+      "fields" : [ 8 ],
+      "properties" : {
+        "ndv" : "2"
+      }
+    } ]
+  } ],
+  "partition-statistics" : [ ],
+  "snapshot-log" : [ {
+    "timestamp-ms" : 1791189664440,
+    "snapshot-id" : 5393093493398652801
+  }, {
+    "timestamp-ms" : 1791189664635,
+    "snapshot-id" : 8350389940873746239
+  }, {
+    "timestamp-ms" : 1791189665020,
+    "snapshot-id" : 5981085234246475373
+  } ],
+  "metadata-log" : [ {
+    "timestamp-ms" : 1791189664440,
+    "metadata-file" : "file:/opt/hive/data/warehouse/gold.db/inference_result_model_a_utama-4053d948521f466da3c14112d17a56a0/metadata/00000-d24adb45-f847-43c8-a26d-5c38cc2374a0.metadata.json"
+  }, {
+    "timestamp-ms" : 1791189664635,
+    "metadata-file" : "file:/opt/hive/data/warehouse/gold.db/inference_result_model_a_utama-4053d948521f466da3c14112d17a56a0/metadata/00001-b00fbb64-0e8d-458d-bb52-7055e1d89f46.metadata.json"
+  }, {
+    "timestamp-ms" : 1791189664688,
+    "metadata-file" : "file:/opt/hive/data/warehouse/gold.db/inference_result_model_a_utama-4053d948521f466da3c14112d17a56a0/metadata/00002-ae77fbaf-6422-4c66-a402-562013c7337d.metadata.json"
+  } ]
+}

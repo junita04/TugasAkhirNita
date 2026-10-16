@@ -18,6 +18,7 @@ from backend.config.settings import (
     S3_PATH_STYLE_ACCESS,
     POSTGRES_ENABLED,
 )
+from backend.config.namespaces import namespace_prefix
 
 
 SPARK_LOCAL_DIR = os.getenv("SPARK_LOCAL_DIRS", "spark-tmp")
@@ -254,16 +255,19 @@ def get_spark(app_name: str = APP_NAME) -> SparkSession:
 
     # HiveCatalog does not create namespaces implicitly. Create every
     # namespace used by the Bronze/Silver/Gold and feature-store stages.
+    # Prefix diambil dari PIPELINE_NS ("" untuk produksi, "qa_" untuk QA)
+    # sehingga jalur QA memakai namespace terpisah tanpa menyentuh produksi.
+    _prefix = namespace_prefix()
     for namespace in ("bronze", "silver", "gold", "feature_store"):
         spark.sql(
-            f"CREATE NAMESPACE IF NOT EXISTS {ICEBERG_NAMESPACE}.{namespace}"
+            f"CREATE NAMESPACE IF NOT EXISTS {ICEBERG_NAMESPACE}.{_prefix}{namespace}"
         )
     # hive_iceberg (HMS-backed) namespace juga perlu dibuat agar
     # Trino bisa melihat tabel Bronze yang ditulis oleh Spark.
     if ICEBERG_CATALOG != "local":
         for namespace in ("bronze", "silver", "gold", "feature_store"):
             spark.sql(
-                f"CREATE NAMESPACE IF NOT EXISTS hive_iceberg.{namespace}"
+                f"CREATE NAMESPACE IF NOT EXISTS hive_iceberg.{_prefix}{namespace}"
             )
 
     print("=" * 60)

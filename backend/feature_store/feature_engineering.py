@@ -2,6 +2,7 @@ from pyspark.sql import functions as F
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.namespaces import table
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -41,11 +42,6 @@ FORBIDDEN_FEATURES = [
     "label",
 ]
 
-# Katalog HMS-backed agar tabel terlihat oleh Trino
-FE_CATALOG = "hive_iceberg"
-DIM_TABLE = f"{FE_CATALOG}.gold.dim_mahasiswa"
-
-
 def join_gold_dataset():
     """
     Membaca Gold dim_mahasiswa (wide schema, sudah termasuk ip + sks).
@@ -60,7 +56,7 @@ def join_gold_dataset():
     logger.info("MEMBACA GOLD DIM_MAHASISWA (WIDE SCHEMA)")
     logger.info("=" * 60)
 
-    df = spark.table(DIM_TABLE)
+    df = spark.table(table("gold", "dim_mahasiswa"))
 
     total = df.count()
     distinct = df.select("id_mahasiswa").distinct().count()

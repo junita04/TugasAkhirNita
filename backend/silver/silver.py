@@ -4,14 +4,12 @@ from pathlib import Path
 
 from pyspark.sql import functions as F
 
-from backend.config.settings import ICEBERG_NAMESPACE, LOG_DIR
+from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.namespaces import ns, log_dir
 from backend.spark.session import get_spark
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-# Katalog HMS-backed agar tabel terlihat oleh Trino
-SILVER_CATALOG = "hive_iceberg"
 
 # ============================================================
 # Spesifikasi Silver per sumber Bronze.
@@ -100,7 +98,7 @@ def _trim_string_columns(df):
 
 
 def _table_exists(spark, table_name):
-    tables = spark.sql(f"SHOW TABLES IN {SILVER_CATALOG}.bronze")
+    tables = spark.sql(f"SHOW TABLES IN {ns('bronze')}")
     return any(row.tableName == table_name for row in tables.collect())
 
 
@@ -256,7 +254,7 @@ def process_table(table_name: str):
     logger.info(f"Processing : {table_name} -> {silver_name}")
     logger.info("=" * 60)
 
-    df = spark.table(f"{SILVER_CATALOG}.bronze.{table_name}")
+    df = spark.table(f"{ns('bronze')}.{table_name}")
 
     logger.info(f"Rows Bronze : {df.count()}")
 
@@ -277,7 +275,7 @@ def process_table(table_name: str):
     elif table_name == "data_khs":
         df = process_khs(df, report)
 
-    df.writeTo(f"{SILVER_CATALOG}.silver.{silver_name}") \
+    df.writeTo(f"{ns('silver')}.{silver_name}") \
         .using("iceberg") \
         .createOrReplace()
 
@@ -303,19 +301,19 @@ def build_quality_report(reports):
     )
 
     if mahasiswa_report and khs_report:
-        ref_ids = spark.table(f"{SILVER_CATALOG}.silver.silver_mahasiswa") \
+        ref_ids = spark.table(f"{ns('silver')}.silver_mahasiswa") \
             .select("id_mahasiswa").distinct().count()
-        khs_ids = spark.table(f"{SILVER_CATALOG}.silver.silver_khs") \
+        khs_ids = spark.table(f"{ns('silver')}.silver_khs") \
             .select("id_mahasiswa").distinct().count()
 
         ref_all = set(
             row[0]
-            for row in spark.table(f"{SILVER_CATALOG}.silver.silver_mahasiswa")
+            for row in spark.table(f"{ns('silver')}.silver_mahasiswa")
             .select("id_mahasiswa").collect()
         )
         khs_all = set(
             row[0]
-            for row in spark.table(f"{SILVER_CATALOG}.silver.silver_khs")
+            for row in spark.table(f"{ns('silver')}.silver_khs")
             .select("id_mahasiswa").collect()
         )
 
@@ -327,8 +325,8 @@ def build_quality_report(reports):
             "referensi_ada_khs": len(ref_all & khs_all),
         }
 
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    json_path = LOG_DIR / "data_quality_report.json"
+    json_path = log_dir() / "data_quality_report.json"
+    json_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(json_path, "w", encoding="utf-8") as fh:
         json.dump(report, fh, ensure_ascii=False, indent=2, default=str)

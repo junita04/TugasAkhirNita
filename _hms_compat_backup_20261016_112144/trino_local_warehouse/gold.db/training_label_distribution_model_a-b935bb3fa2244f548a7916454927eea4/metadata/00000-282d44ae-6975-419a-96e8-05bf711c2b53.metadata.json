@@ -1,0 +1,75 @@
+{
+  "format-version" : 2,
+  "table-uuid" : "4a7d9e5c-efe7-42c0-a2e0-e3bc1c3d86d4",
+  "location" : "file:/opt/hive/data/warehouse/gold.db/training_label_distribution_model_a-b935bb3fa2244f548a7916454927eea4",
+  "last-sequence-number" : 1,
+  "last-updated-ms" : 1791444626964,
+  "last-column-id" : 2,
+  "current-schema-id" : 0,
+  "schemas" : [ {
+    "type" : "struct",
+    "schema-id" : 0,
+    "fields" : [ {
+      "id" : 1,
+      "name" : "label",
+      "required" : false,
+      "type" : "int"
+    }, {
+      "id" : 2,
+      "name" : "jumlah",
+      "required" : false,
+      "type" : "int"
+    } ]
+  } ],
+  "default-spec-id" : 0,
+  "partition-specs" : [ {
+    "spec-id" : 0,
+    "fields" : [ ]
+  } ],
+  "last-partition-id" : 999,
+  "default-sort-order-id" : 0,
+  "sort-orders" : [ {
+    "order-id" : 0,
+    "fields" : [ ]
+  } ],
+  "properties" : {
+    "write.format.default" : "PARQUET",
+    "write.parquet.compression-codec" : "zstd"
+  },
+  "current-snapshot-id" : 6874381090849162701,
+  "refs" : {
+    "main" : {
+      "snapshot-id" : 6874381090849162701,
+      "type" : "branch"
+    }
+  },
+  "snapshots" : [ {
+    "sequence-number" : 1,
+    "snapshot-id" : 6874381090849162701,
+    "timestamp-ms" : 1791444626964,
+    "summary" : {
+      "operation" : "append",
+      "trino_query_id" : "20261008_073027_00499_84e7v",
+      "trino_user" : "root",
+      "changed-partition-count" : "0",
+      "total-records" : "0",
+      "total-files-size" : "0",
+      "total-data-files" : "0",
+      "total-delete-files" : "0",
+      "total-position-deletes" : "0",
+      "total-equality-deletes" : "0",
+      "engine-version" : "467",
+      "engine-name" : "trino",
+      "iceberg-version" : "Apache Iceberg 1.7.0 (commit 5f7c992ca673bf41df1d37543b24d646c24568a9)"
+    },
+    "manifest-list" : "file:/opt/hive/data/warehouse/gold.db/training_label_distribution_model_a-b935bb3fa2244f548a7916454927eea4/metadata/snap-6874381090849162701-1-2cf4b3bb-eb3c-420b-8289-0a4eab9a5ea9.avro",
+    "schema-id" : 0
+  } ],
+  "statistics" : [ ],
+  "partition-statistics" : [ ],
+  "snapshot-log" : [ {
+    "timestamp-ms" : 1791444626964,
+    "snapshot-id" : 6874381090849162701
+  } ],
+  "metadata-log" : [ ]
+}

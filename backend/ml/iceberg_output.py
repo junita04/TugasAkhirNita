@@ -25,23 +25,35 @@ import numpy as np
 import pandas as pd
 import requests
 
-from backend.config.settings import LOG_DIR, PROJECT_ROOT
+from backend.config.namespaces import ml_output_dir, log_dir, table, namespace_prefix
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Source file from new inference pipeline
-EXCEL_SOURCE = PROJECT_ROOT / "data" / "data fix" / "inference_result_model_a_utama.xlsx"
+
+# Source file dari inference pipeline. Dievaluasi saat dipanggil agar
+# mengikuti PIPELINE_ML_OUTPUT_DIR (produksi/QA).
+def excel_source():
+    return ml_output_dir() / "inference_result_model_a_utama.xlsx"
+
 
 TRINO_URL = "http://trino:8082/v1/statement"
-TRINO_HEADERS = {
-    "X-Trino-User": "airflow",
-    "X-Trino-Catalog": "iceberg",
-    "X-Trino-Schema": "gold",
-}
+TRINO_USER = "airflow"
 TRINO_TIMEOUT = 120
 
-TARGET_TABLE = "iceberg.gold.inference_result_model_a_utama"
+
+def _trino_headers():
+    return {
+        "X-Trino-User": TRINO_USER,
+        "X-Trino-Catalog": "iceberg",
+        "X-Trino-Schema": f"{namespace_prefix()}gold",
+    }
+
+
+# Tabel target FINAL. Dievaluasi saat dipanggil agar mengikuti PIPELINE_NS.
+def target_table():
+    return table("gold", "inference_result_model_a_utama", catalog="iceberg")
+
 
 IDENTIFIER_COLUMN = "id_mahasiswa"
 
@@ -54,8 +66,6 @@ REQUIRED_COLUMNS = [
 ]
 
 EXPECTED_DISTRIBUTION = {"0": 1476, "1": 10862}  # referensi (bisa berubah tiap run)
-
-EXCEL_SOURCE_STR = str(EXCEL_SOURCE)
 
 BATCH_SIZE = 500
 
@@ -76,7 +86,7 @@ def _trino_execute(sql):
     """
     resp = requests.post(
         TRINO_URL,
-        headers=TRINO_HEADERS,
+        headers=_trino_headers(),
         data=sql.encode("utf-8"),
         timeout=TRINO_TIMEOUT,
     )
@@ -92,7 +102,7 @@ def _trino_execute(sql):
     while next_uri:
         poll = requests.get(
             next_uri,
-            headers={"X-Trino-User": TRINO_HEADERS["X-Trino-User"]},
+            headers={"X-Trino-User": TRINO_USER},
             timeout=TRINO_TIMEOUT,
         )
         result = poll.json()
@@ -158,11 +168,11 @@ def _write_to_iceberg(pdf):
     columns = list(pdf.columns)
 
     # 1. Drop & recreate (idempotent — data Excel diperbarui tiap run inference)
-    _trino_execute(f"DROP TABLE IF EXISTS {TARGET_TABLE}")
+    _trino_execute(f"DROP TABLE IF EXISTS {target_table()}")
 
     col_defs = ", ".join(f"{c} {_trino_type(pdf[c].dtype)}" for c in columns)
-    _trino_execute(f"CREATE TABLE {TARGET_TABLE} ({col_defs}) WITH (format = 'PARQUET')")
-    logger.info(f"  ✓ CREATE TABLE : {TARGET_TABLE}")
+    _trino_execute(f"CREATE TABLE {target_table()} ({col_defs}) WITH (format = 'PARQUET')")
+    logger.info(f"  ✓ CREATE TABLE : {target_table()}")
 
     # 2. Batch INSERT
     total = len(pdf)
@@ -177,13 +187,13 @@ def _write_to_iceberg(pdf):
 
         values_sql = ", ".join(value_rows)
         _trino_execute(
-            f"INSERT INTO {TARGET_TABLE} ({col_list}) VALUES {values_sql}"
+            f"INSERT INTO {target_table()} ({col_list}) VALUES {values_sql}"
         )
         logger.info(
             f"    batch rows {start}-{min(start + BATCH_SIZE, total)} OK"
         )
 
-    logger.info(f"  ✓ Data ditulis ke Iceberg : {TARGET_TABLE} ({total} rows)")
+    logger.info(f"  ✓ Data ditulis ke Iceberg : {target_table()} ({total} rows)")
 
 
 def _validate_iceberg(expected_count):
@@ -192,29 +202,29 @@ def _validate_iceberg(expected_count):
     logger.info("VALIDASI TABEL ICEBERG (INFERENCE MODEL UTAMA)")
     logger.info("=" * 60)
 
-    total = int(_trino_scalar(f"SELECT COUNT(*) FROM {TARGET_TABLE}"))
+    total = int(_trino_scalar(f"SELECT COUNT(*) FROM {target_table()}"))
     distinct_id = int(
         _trino_scalar(
-            f"SELECT COUNT(DISTINCT {IDENTIFIER_COLUMN}) FROM {TARGET_TABLE}"
+            f"SELECT COUNT(DISTINCT {IDENTIFIER_COLUMN}) FROM {target_table()}"
         )
     )
 
     null_counts = {}
     for c in REQUIRED_COLUMNS:
         null_counts[c] = int(
-            _trino_scalar(f"SELECT COUNT(*) FROM {TARGET_TABLE} WHERE {c} IS NULL")
+            _trino_scalar(f"SELECT COUNT(*) FROM {target_table()} WHERE {c} IS NULL")
         )
     total_null = sum(null_counts.values())
 
     dist_rows = _trino_execute(
         f"SELECT CAST(prediksi AS VARCHAR), COUNT(*) "
-        f"FROM {TARGET_TABLE} GROUP BY prediksi ORDER BY prediksi"
+        f"FROM {target_table()} GROUP BY prediksi ORDER BY prediksi"
     )
     distribution = {row[0]: int(row[1]) for row in dist_rows}
 
     result = {
-        "target_table": TARGET_TABLE,
-        "source_excel": EXCEL_SOURCE_STR,
+        "target_table": target_table(),
+        "source_excel": str(excel_source()),
         "source_row_count": expected_count,
         "iceberg_row_count": total,
         "row_count_ok": total == expected_count,
@@ -253,7 +263,7 @@ def _validate_iceberg(expected_count):
 
 
 def _write_quality_report(report):
-    path = LOG_DIR / "inference_iceberg_quality_report.json"
+    path = log_dir() / "inference_iceberg_quality_report.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
@@ -272,7 +282,7 @@ def run_iceberg_output():
     logger.info("=" * 60)
 
     # 1. Read Excel
-    pdf = _read_excel(EXCEL_SOURCE)
+    pdf = _read_excel(excel_source())
 
     missing = [c for c in REQUIRED_COLUMNS if c not in pdf.columns]
     if missing:
@@ -304,14 +314,14 @@ def reload_test():
     logger.info("RELOAD TEST — TABEL ICEBERG INFERENCE MODEL UTAMA")
     logger.info("=" * 60)
 
-    total = int(_trino_scalar(f"SELECT COUNT(*) FROM {TARGET_TABLE}"))
+    total = int(_trino_scalar(f"SELECT COUNT(*) FROM {target_table()}"))
     sample_rows = _trino_execute(
-        f"SELECT * FROM {TARGET_TABLE} LIMIT 3"
+        f"SELECT * FROM {target_table()} LIMIT 3"
     )
 
-    logger.info(f"  {TARGET_TABLE:<55} : {total} rows")
+    logger.info(f"  {target_table():<55} : {total} rows")
     return {
-        "table": TARGET_TABLE,
+        "table": target_table(),
         "count": total,
         "sample": sample_rows,
     }

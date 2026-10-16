@@ -1,0 +1,281 @@
+{
+  "captured_at": "2026-10-16T03:36:19.167287+00:00",
+  "trino_url": "http://trino:8082/v1/statement",
+  "schemas": [
+    "bronze",
+    "silver",
+    "gold",
+    "feature_store"
+  ],
+  "tables": {
+    "bronze.data_kelas": {
+      "rows": 3540,
+      "snapshot_id": "4567345278811563317"
+    },
+    "bronze.data_kelas_fix": {
+      "rows": 3540,
+      "snapshot_id": "6674287319744857988"
+    },
+    "bronze.data_khs": {
+      "rows": 28473,
+      "snapshot_id": "7046728485618420936"
+    },
+    "bronze.data_khs_fix": {
+      "rows": 28273,
+      "snapshot_id": "5060713887712833978"
+    },
+    "bronze.data_kurikulum": {
+      "rows": 999,
+      "snapshot_id": "3857785105325861478"
+    },
+    "bronze.data_kurikulum_fix": {
+      "rows": 147,
+      "snapshot_id": "5988599177035757031"
+    },
+    "bronze.data_program_studi": {
+      "rows": 999,
+      "snapshot_id": "2243554644076142074"
+    },
+    "bronze.data_program_studi_fix": {
+      "rows": 44,
+      "snapshot_id": "3444479860209774140"
+    },
+    "bronze.data_referensi_mahasiswa": {
+      "rows": 37655,
+      "snapshot_id": "3738471823156747344"
+    },
+    "bronze.data_referensi_mahasiswa_fix": {
+      "rows": 37655,
+      "snapshot_id": "1330071661233149125"
+    },
+    "silver.silver_kelas": {
+      "rows": 3540,
+      "snapshot_id": "5751705393844348270"
+    },
+    "silver.silver_khs": {
+      "rows": 27843,
+      "snapshot_id": "7064756319777157988"
+    },
+    "silver.silver_khs_fix": {
+      "rows": 27843,
+      "snapshot_id": "7519290992030789238"
+    },
+    "silver.silver_kurikulum": {
+      "rows": 147,
+      "snapshot_id": "8311443913709656764"
+    },
+    "silver.silver_mahasiswa": {
+      "rows": 32703,
+      "snapshot_id": "4228205164170945260"
+    },
+    "silver.silver_program_studi": {
+      "rows": 44,
+      "snapshot_id": "8076619600160691930"
+    },
+    "silver.silver_referensi_mahasiswa_fix": {
+      "rows": 32703,
+      "snapshot_id": "4025615650638129268"
+    },
+    "gold.classification_report": {
+      "rows": 3,
+      "snapshot_id": "8681936454458508387"
+    },
+    "gold.classification_report_final": {
+      "rows": 6,
+      "snapshot_id": "4900602607274809545"
+    },
+    "gold.classification_report_model_a": {
+      "rows": 3,
+      "snapshot_id": "3598949647772355245"
+    },
+    "gold.confusion_matrix": {
+      "rows": 4,
+      "snapshot_id": "4042385327777828257"
+    },
+    "gold.confusion_matrix_final": {
+      "rows": 8,
+      "snapshot_id": "6163790270597743439"
+    },
+    "gold.confusion_matrix_model_a": {
+      "rows": 4,
+      "snapshot_id": "8161286499603239859"
+    },
+    "gold.data_referensi_mahasiswa": {
+      "rows": 32712,
+      "snapshot_id": "7951110297759597928"
+    },
+    "gold.dim_mahasiswa": {
+      "rows": 32703,
+      "snapshot_id": "9027098659027477785"
+    },
+    "gold.dim_mahasiswa_fix": {
+      "rows": 32703,
+      "snapshot_id": "6073211514331638889"
+    },
+    "gold.fact_khs": {
+      "rows": 27843,
+      "snapshot_id": "126458660494198430"
+    },
+    "gold.fact_khs_fix": {
+      "rows": 27843,
+      "snapshot_id": "6847439396239534915"
+    },
+    "gold.gold_kurikulum": {
+      "rows": 147,
+      "snapshot_id": "1439603954194082844"
+    },
+    "gold.gold_mahasiswa": {
+      "rows": 32738,
+      "snapshot_id": "4546991511903870472"
+    },
+    "gold.gold_mahasiswa_lama": {
+      "rows": 0
+    },
+    "gold.gold_program_studi": {
+      "rows": 44,
+      "snapshot_id": "5696396293577000089"
+    },
+    "gold.inference_result_model_a_utama": {
+      "rows": 12338,
+      "snapshot_id": "7634094859357681457"
+    },
+    "gold.inference_result_model_utama": {
+      "rows": 0,
+      "snapshot_id": "4533056648755519264"
+    },
+    "gold.inference_result_model_utama-d7664e4b37b94b3c99788f1b8604546f": {
+      "rows": 0,
+      "snapshot_id": "5416645061059909769"
+    },
+    "gold.model_metrics": {
+      "rows": 1,
+      "snapshot_id": "7783262263443461482"
+    },
+    "gold.model_metrics_final": {
+      "rows": 2,
+      "snapshot_id": "7250302125011947711"
+    },
+    "gold.model_metrics_model_a": {
+      "rows": 1,
+      "snapshot_id": "5426383865483034712"
+    },
+    "gold.model_predictions": {
+      "rows": 12244,
+      "snapshot_id": "8055045416443573403"
+    },
+    "gold.model_predictions_model_a": {
+      "rows": 12338,
+      "snapshot_id": "5501920273487433823"
+    },
+    "gold.model_predictions_v2": {
+      "rows": 12338,
+      "snapshot_id": "707105764858127432"
+    },
+    "gold.prediction_by_angkatan": {
+      "rows": 6,
+      "snapshot_id": "3023119637028511841"
+    },
+    "gold.prediction_by_angkatan_final": {
+      "rows": 3,
+      "snapshot_id": "8089644516363836115"
+    },
+    "gold.prediction_by_angkatan_model_a": {
+      "rows": 3,
+      "snapshot_id": "6419389908425948975"
+    },
+    "gold.prediction_by_angkatan_v2": {
+      "rows": 3,
+      "snapshot_id": "8192288419201819675"
+    },
+    "gold.training_label_distribution_by_angkatan": {
+      "rows": 17,
+      "snapshot_id": "2626024398184547459"
+    },
+    "gold.training_label_distribution_model_a": {
+      "rows": 2,
+      "snapshot_id": "4763851253793278265"
+    },
+    "feature_store.feature_store_graduation_prediction": {
+      "rows": 13328,
+      "snapshot_id": "8246957894453860355"
+    },
+    "feature_store.inference_dataset": {
+      "rows": 12338,
+      "snapshot_id": "4761475140609635777"
+    },
+    "feature_store.inference_dataset_fix": {
+      "rows": 12338,
+      "snapshot_id": "1613286229181225610"
+    },
+    "feature_store.inference_dataset_v2": {
+      "rows": 12338,
+      "snapshot_id": "8782613072314677884"
+    },
+    "feature_store.inference_mahasiswa_aktif": {
+      "rows": 14662,
+      "snapshot_id": "7352864765614231885"
+    },
+    "feature_store.inference_result": {
+      "rows": 12338,
+      "snapshot_id": "8775018120353196412"
+    },
+    "feature_store.inference_result_new": {
+      "rows": 12338,
+      "snapshot_id": "8775018120353196412"
+    },
+    "feature_store.prediction_comparison": {
+      "rows": 12244,
+      "snapshot_id": "27658136723047738"
+    },
+    "feature_store.prediction_result": {
+      "rows": 14926,
+      "snapshot_id": "3661643713847877838"
+    },
+    "feature_store.prediction_result_with_smote": {
+      "rows": 12501,
+      "snapshot_id": "7981093771918125305"
+    },
+    "feature_store.prediction_result_without_smote": {
+      "rows": 12501,
+      "snapshot_id": "3146099807424051849"
+    },
+    "feature_store.training_dataset": {
+      "rows": 15505,
+      "snapshot_id": "7167465416647414231"
+    },
+    "feature_store.training_dataset_fix": {
+      "rows": 15505,
+      "snapshot_id": "467618937541974059"
+    },
+    "feature_store.training_dataset_v2": {
+      "rows": 15505,
+      "snapshot_id": "1546498078686132969"
+    },
+    "feature_store.training_dataset_v2_fe": {
+      "rows": 15505,
+      "snapshot_id": "7766229808974798500"
+    },
+    "feature_store.training_kelulusan": {
+      "rows": 13181,
+      "snapshot_id": "7297536975299440217"
+    }
+  },
+  "model_files": {
+    "model_a_utama.joblib": {
+      "sha256": "289a157421abfbd7b0e7a49554a575964b14259d1e541310531cd6e3e439ed94",
+      "bytes": 2147
+    },
+    "model_b_pembanding.joblib": {
+      "sha256": "746289db93fd8a94f441d9d1a8a8d84be6fa97c9d1e094ac1ee793326c73d0fa",
+      "bytes": 2147
+    },
+    "model_a_utama_metadata.json": {
+      "sha256": "00adcdc282c9d94ac9fc930bf30879eff7df37e391011ed27e7c8a4dc1a8090e",
+      "bytes": 2023
+    },
+    "model_b_pembanding_metadata.json": {
+      "sha256": "56de9af4f753930ac5e5767a4de1e6329d0791fc80a2a28d9619e238526d7eb9",
+      "bytes": 2021
+    }
+  }
+}

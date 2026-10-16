@@ -3,6 +3,7 @@ from pyspark.sql.types import IntegerType
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.namespaces import table
 from backend.utils.logger import get_logger
 
 from backend.feature_store.feature_engineering import (
@@ -14,10 +15,6 @@ from backend.feature_store.feature_engineering import (
 from backend.gold.gold_mahasiswa import TARGET_SKS, SNAPSHOT_SEMESTER
 
 logger = get_logger(__name__)
-
-# Katalog HMS-backed agar tabel terlihat oleh Trino
-FE_CATALOG = "hive_iceberg"
-INFERENCE_TABLE = f"{FE_CATALOG}.feature_store.inference_dataset"
 
 # Angkatan inference
 INFERENCE_ANGKATAN = [2022, 2023, 2024]
@@ -204,7 +201,7 @@ def create_inference_dataset(joined):
     # =====================================================
 
     (
-        inference_df.writeTo(INFERENCE_TABLE)
+        inference_df.writeTo(table("feature_store", "inference_dataset"))
         .using("iceberg")
         .createOrReplace()
     )
@@ -231,7 +228,7 @@ def create_inference_dataset(joined):
         logger.info(f"  Angkatan {row['angkatan']}: {row['count']}")
 
     report = {
-        "table": INFERENCE_TABLE,
+        "table": table("feature_store", "inference_dataset"),
         "jumlah_awal_angkatan_2022_2024": total_angkatan,
         "jumlah_aktif": total_aktif,
         "jumlah_lulus": total_lulus,

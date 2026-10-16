@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- ============================================= -->
+    <!-- Koneksi ke Postgres (postgres-hive)           -->
+    <!-- ============================================= -->
+    <property>
+        <name>javax.jdo.option.ConnectionURL</name>
+        <value>jdbc:postgresql://postgres-hive:5432/metastore</value>
+    </property>
+    <property>
+        <name>javax.jdo.option.ConnectionDriverName</name>
+        <value>org.postgresql.Driver</value>
+    </property>
+    <property>
+        <name>javax.jdo.option.ConnectionUserName</name>
+        <value>${env:POSTGRES_HIVE_USER}</value>
+    </property>
+    <property>
+        <name>javax.jdo.option.ConnectionPassword</name>
+        <value>${env:POSTGRES_HIVE_PASSWORD}</value>
+    </property>
+
+    <!-- ============================================= -->
+    <!-- Konfigurasi standalone metastore              -->
+    <!-- ============================================= -->
+    <property>
+        <name>hive.metastore.schema.verification</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>datanucleus.schema.autoCreateAll</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>datanucleus.autoCreateSchema</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://0.0.0.0:9083</value>
+    </property>
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>s3a://warehouse/iceberg</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://minio:9000</value>
+    </property>
+    <property>
+        <name>fs.s3a.access.key</name>
+        <value>${env:MINIO_ROOT_USER}</value>
+    </property>
+    <property>
+        <name>fs.s3a.secret.key</name>
+        <value>${env:MINIO_ROOT_PASSWORD}</value>
+    </property>
+    <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>fs.s3a.impl</name>
+        <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+    </property>
+
+    <!-- ============================================= -->
+    <!-- Kompatibilitas hadoop-aws 3.3.4 vs hadoop-common 3.4.1 -->
+    <!-- core-default.xml hadoop-common 3.4.1 memakai format durasi ("60s", "30s", "64K"), sedangkan hadoop-aws 3.3.4 membaca key berikut sebagai angka polos (longOption/intOption/getLong) sehingga NumberFormatException saat inisialisasi S3A. -->
+    <!-- ============================================= -->
+    <property>
+        <name>fs.s3a.threads.keepalivetime</name>
+        <value>60</value>
+    </property>
+    <property>
+        <name>fs.s3a.connection.establish.timeout</name>
+        <value>50000</value>
+    </property>
+    <property>
+        <name>fs.s3a.connection.timeout</name>
+        <value>200000</value>
+    </property>
+    <property>
+        <name>fs.s3a.multipart.purge.age</name>
+        <value>86400</value>
+    </property>
+    <property>
+        <name>fs.s3a.readahead.range</name>
+        <value>65536</value>
+    </property>
+    <!-- Daftar provider default di core-default 3.4.1 merujuk kelas AWS SDK v2 (software.amazon.awssdk) yang tidak ada di classpath; pakai provider bawaan hadoop-aws 3.3.4 saja. -->
+    <property>
+        <name>fs.s3a.aws.credentials.provider</name>
+        <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+    </property>
+</configuration>

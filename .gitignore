@@ -14,3 +14,4 @@ DockerDesktopData/
 _recovery_cleanup/
 
 docker/airflow/jars/*.jar
+docker.backup/airflow/jars/aws-java-sdk-bundle-1.12.261.jar

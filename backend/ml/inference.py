@@ -15,21 +15,25 @@ if str(ML_DIR) not in sys.path:
 
 from hybrid_nb import HybridNaiveBayes
 
-MODEL_DIR = Path("/opt/airflow/models")
-OUTPUT_DIR = Path("/opt/airflow/data/data fix")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+from backend.config.namespaces import model_dir, ml_output_dir
 
 
-def load_model(model_name):
-    model_path = MODEL_DIR / f"{model_name}.joblib"
-    meta_path = MODEL_DIR / f"{model_name}_metadata.json"
+def load_model(model_name, model_dir_path=None):
+    base_dir = Path(model_dir_path) if model_dir_path is not None else model_dir()
+    model_path = base_dir / f"{model_name}.joblib"
+    meta_path = base_dir / f"{model_name}_metadata.json"
     model = joblib.load(model_path)
     with open(meta_path) as f:
         metadata = json.load(f)
     return model, metadata
 
 
-def run_inference(model_name="model_a_utama"):
+def run_inference(
+    model_name="model_a_utama",
+    data_loader=None,
+    output_dir_path=None,
+    output_filename=None,
+):
     print(f"\n{'='*60}")
     print(f"Inference: {model_name}")
     print(f"{'='*60}")
@@ -38,9 +42,14 @@ def run_inference(model_name="model_a_utama"):
     cat_cols = metadata["categorical_features"]
     num_cols = metadata["numerical_features"]
 
-    from data_preparation import load_inference_excel, get_inference_data
+    # Sumber data: default Excel (perilaku produksi). Jalur QA dapat
+    # menyuntikkan ``data_loader`` yang membaca Feature Store QA.
+    if data_loader is None:
+        from data_preparation import get_inference_data
 
-    X, ids, df_inference = get_inference_data(model="A")
+        X, ids, df_inference = get_inference_data(model="A")
+    else:
+        X, ids, df_inference = data_loader()
 
     print(f"Input shape: {X.shape}")
     print(f"Categorical features: {cat_cols}")
@@ -106,8 +115,11 @@ def run_inference(model_name="model_a_utama"):
                     "kecepatan_sks_per_semester", "prob_tepat_waktu", "prob_terlambat", "prediksi"]
     print(result_df[display_cols].head(10).to_string())
 
-    # Save to Excel
-    output_path = OUTPUT_DIR / f"inference_result_model_a_utama.xlsx"
+    # Save to Excel (direktori mengikuti PIPELINE_ML_OUTPUT_DIR)
+    out_dir = Path(output_dir_path) if output_dir_path is not None else ml_output_dir()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    filename = output_filename or "inference_result_model_a_utama.xlsx"
+    output_path = out_dir / filename
     result_df.to_excel(output_path, index=False)
     print(f"\nSaved to {output_path}")
 

@@ -1,0 +1,272 @@
+{
+  "format-version" : 2,
+  "table-uuid" : "8b10e9e7-c829-4010-b088-09c48e748d6b",
+  "location" : "file:/opt/hive/data/warehouse/gold.db/model_predictions_model_a-80cd10b2d8024076b403f2a74b34f261",
+  "last-sequence-number" : 1,
+  "last-updated-ms" : 1791442603408,
+  "last-column-id" : 15,
+  "current-schema-id" : 0,
+  "schemas" : [ {
+    "type" : "struct",
+    "schema-id" : 0,
+    "fields" : [ {
+      "id" : 1,
+      "name" : "id_mahasiswa",
+      "required" : false,
+      "type" : "string"
+    }, {
+      "id" : 2,
+      "name" : "angkatan",
+      "required" : false,
+      "type" : "int"
+    }, {
+      "id" : 3,
+      "name" : "ip",
+      "required" : false,
+      "type" : "double"
+    }, {
+      "id" : 4,
+      "name" : "ipk",
+      "required" : false,
+      "type" : "double"
+    }, {
+      "id" : 5,
+      "name" : "total_sks",
+      "required" : false,
+      "type" : "int"
+    }, {
+      "id" : 6,
+      "name" : "jumlah_mk",
+      "required" : false,
+      "type" : "int"
+    }, {
+      "id" : 7,
+      "name" : "sks_seharusnya",
+      "required" : false,
+      "type" : "int"
+    }, {
+      "id" : 8,
+      "name" : "selisih_sks",
+      "required" : false,
+      "type" : "long"
+    }, {
+      "id" : 9,
+      "name" : "jk_enc",
+      "required" : false,
+      "type" : "int"
+    }, {
+      "id" : 10,
+      "name" : "ipk_kategori",
+      "required" : false,
+      "type" : "long"
+    }, {
+      "id" : 11,
+      "name" : "kecepatan_sks_per_semester",
+      "required" : false,
+      "type" : "double"
+    }, {
+      "id" : 12,
+      "name" : "probabilitas_tepat_waktu",
+      "required" : false,
+      "type" : "double"
+    }, {
+      "id" : 13,
+      "name" : "probabilitas_terlambat",
+      "required" : false,
+      "type" : "double"
+    }, {
+      "id" : 14,
+      "name" : "prediksi",
+      "required" : false,
+      "type" : "long"
+    }, {
+      "id" : 15,
+      "name" : "prediksi_label",
+      "required" : false,
+      "type" : "string"
+    } ]
+  } ],
+  "default-spec-id" : 0,
+  "partition-specs" : [ {
+    "spec-id" : 0,
+    "fields" : [ ]
+  } ],
+  "last-partition-id" : 999,
+  "default-sort-order-id" : 0,
+  "sort-orders" : [ {
+    "order-id" : 0,
+    "fields" : [ ]
+  } ],
+  "properties" : {
+    "write.format.default" : "PARQUET",
+    "write.parquet.compression-codec" : "zstd"
+  },
+  "current-snapshot-id" : 5501920273487433823,
+  "refs" : {
+    "main" : {
+      "snapshot-id" : 5501920273487433823,
+      "type" : "branch"
+    }
+  },
+  "snapshots" : [ {
+    "sequence-number" : 1,
+    "snapshot-id" : 5501920273487433823,
+    "timestamp-ms" : 1791442603254,
+    "summary" : {
+      "operation" : "append",
+      "trino_query_id" : "20261008_065641_00246_84e7v",
+      "trino_user" : "root",
+      "added-data-files" : "1",
+      "added-records" : "12338",
+      "added-files-size" : "163834",
+      "changed-partition-count" : "1",
+      "total-records" : "12338",
+      "total-files-size" : "163834",
+      "total-data-files" : "1",
+      "total-delete-files" : "0",
+      "total-position-deletes" : "0",
+      "total-equality-deletes" : "0",
+      "engine-version" : "467",
+      "engine-name" : "trino",
+      "iceberg-version" : "Apache Iceberg 1.7.0 (commit 5f7c992ca673bf41df1d37543b24d646c24568a9)"
+    },
+    "manifest-list" : "file:/opt/hive/data/warehouse/gold.db/model_predictions_model_a-80cd10b2d8024076b403f2a74b34f261/metadata/snap-5501920273487433823-1-41da7657-8621-42e5-bff7-908356b4f0bd.avro",
+    "schema-id" : 0
+  } ],
+  "statistics" : [ {
+    "snapshot-id" : 5501920273487433823,
+    "statistics-path" : "file:/opt/hive/data/warehouse/gold.db/model_predictions_model_a-80cd10b2d8024076b403f2a74b34f261/metadata/20261008_065641_00246_84e7v-ba2fac87-2049-40cb-a5e8-21d902546bda.stats",
+    "file-size-in-bytes" : 73482,
+    "file-footer-size-in-bytes" : 2906,
+    "blob-metadata" : [ {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 1 ],
+      "properties" : {
+        "ndv" : "12304"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 2 ],
+      "properties" : {
+        "ndv" : "3"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 3 ],
+      "properties" : {
+        "ndv" : "340"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 4 ],
+      "properties" : {
+        "ndv" : "331"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 5 ],
+      "properties" : {
+        "ndv" : "123"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 6 ],
+      "properties" : {
+        "ndv" : "63"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 7 ],
+      "properties" : {
+        "ndv" : "4"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 8 ],
+      "properties" : {
+        "ndv" : "91"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 9 ],
+      "properties" : {
+        "ndv" : "2"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 10 ],
+      "properties" : {
+        "ndv" : "3"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 11 ],
+      "properties" : {
+        "ndv" : "169"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 12 ],
+      "properties" : {
+        "ndv" : "1768"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 13 ],
+      "properties" : {
+        "ndv" : "1768"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 14 ],
+      "properties" : {
+        "ndv" : "2"
+      }
+    }, {
+      "type" : "apache-datasketches-theta-v1",
+      "snapshot-id" : 5501920273487433823,
+      "sequence-number" : 1,
+      "fields" : [ 15 ],
+      "properties" : {
+        "ndv" : "2"
+      }
+    } ]
+  } ],
+  "partition-statistics" : [ ],
+  "snapshot-log" : [ {
+    "timestamp-ms" : 1791442603254,
+    "snapshot-id" : 5501920273487433823
+  } ],
+  "metadata-log" : [ {
+    "timestamp-ms" : 1791442603254,
+    "metadata-file" : "file:/opt/hive/data/warehouse/gold.db/model_predictions_model_a-80cd10b2d8024076b403f2a74b34f261/metadata/00000-fa2266b8-aec1-4699-aad6-e5e1ef9bbee1.metadata.json"
+  } ]
+}

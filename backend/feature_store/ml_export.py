@@ -33,6 +33,7 @@ Kontrak kolom ML (hasil ``build_ml_training_frame``)::
     ipk_kategori, angkatan_enc, label
 """
 
+from backend.config.namespaces import table
 from backend.utils.logger import get_logger
 from backend.feature_store.feature_engineering import FEATURE_X
 
@@ -41,11 +42,16 @@ logger = get_logger(__name__)
 
 # ============================================================
 # Tabel Feature Store (sumber, baca-saja)
+#
+# Dievaluasi SAAT DIPANGGIL agar mengikuti PIPELINE_NS (produksi/QA).
 # ============================================================
 
-FS_CATALOG = "hive_iceberg"
-FS_TRAINING_TABLE = f"{FS_CATALOG}.feature_store.training_dataset"
-FS_INFERENCE_TABLE = f"{FS_CATALOG}.feature_store.inference_dataset"
+def fs_training_table() -> str:
+    return table("feature_store", "training_dataset")
+
+
+def fs_inference_table() -> str:
+    return table("feature_store", "inference_dataset")
 
 
 # ============================================================
@@ -89,12 +95,15 @@ ML_INFERENCE_COLUMNS = ["id_mahasiswa", *ML_FEATURE_COLUMNS]
 # Target ekspor terisolasi (DEV hanya, NONAKTIF secara default)
 #
 # Tabel ini BUKAN output produksi. Gunakan hanya untuk pengembangan/QA.
+# Dievaluasi SAAT DIPANGGIL agar mengikuti PIPELINE_NS.
 # ============================================================
 
-ML_EXPORT_CATALOG = FS_CATALOG
-ML_EXPORT_NAMESPACE = "feature_store"
-ML_EXPORT_TRAINING_TABLE = f"{ML_EXPORT_CATALOG}.{ML_EXPORT_NAMESPACE}.ml_training_dataset_v1"
-ML_EXPORT_INFERENCE_TABLE = f"{ML_EXPORT_CATALOG}.{ML_EXPORT_NAMESPACE}.ml_inference_dataset_v1"
+def ml_export_training_table() -> str:
+    return table("feature_store", "ml_training_dataset_v1")
+
+
+def ml_export_inference_table() -> str:
+    return table("feature_store", "ml_inference_dataset_v1")
 
 
 # ============================================================
@@ -228,8 +237,8 @@ def load_feature_store_frames(spark=None):
 
         spark = get_spark("Tahap 2 - ML Export")
 
-    training_fs = spark.table(FS_TRAINING_TABLE)
-    inference_fs = spark.table(FS_INFERENCE_TABLE)
+    training_fs = spark.table(fs_training_table())
+    inference_fs = spark.table(fs_inference_table())
     return training_fs, inference_fs
 
 
@@ -245,8 +254,8 @@ def validate_feature_store_datasets(spark=None):
 
     report = {
         "source_tables": {
-            "training": FS_TRAINING_TABLE,
-            "inference": FS_INFERENCE_TABLE,
+            "training": fs_training_table(),
+            "inference": fs_inference_table(),
         },
         "angkatan_enc_rule": ANGKATAN_ENC_RULE,
         "rename_map": ML_RENAME_MAP,
@@ -287,21 +296,21 @@ def export_ml_datasets(enabled=False, spark=None):
 
     logger.warning(
         "export_ml_datasets AKTIF: menulis ke tabel terisolasi (DEV): "
-        f"{ML_EXPORT_TRAINING_TABLE}, {ML_EXPORT_INFERENCE_TABLE}"
+        f"{ml_export_training_table()}, {ml_export_inference_table()}"
     )
 
     (
-        ml_training.writeTo(ML_EXPORT_TRAINING_TABLE)
+        ml_training.writeTo(ml_export_training_table())
         .using("iceberg")
         .createOrReplace()
     )
     (
-        ml_inference.writeTo(ML_EXPORT_INFERENCE_TABLE)
+        ml_inference.writeTo(ml_export_inference_table())
         .using("iceberg")
         .createOrReplace()
     )
 
     return {
-        "training": ML_EXPORT_TRAINING_TABLE,
-        "inference": ML_EXPORT_INFERENCE_TABLE,
+        "training": ml_export_training_table(),
+        "inference": ml_export_inference_table(),
     }

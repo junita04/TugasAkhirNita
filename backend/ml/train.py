@@ -14,10 +14,9 @@ from sklearn.metrics import (
 
 from hybrid_nb import HybridNaiveBayes
 
-warnings.filterwarnings("ignore")
+from backend.config.namespaces import model_dir
 
-MODEL_DIR = Path("/opt/airflow/models")
-MODEL_DIR.mkdir(parents=True, exist_ok=True)
+warnings.filterwarnings("ignore")
 
 WEIGHT_GRID = np.arange(0.1, 1.0, 0.1)
 CV_FOLDS = 10
@@ -247,8 +246,10 @@ def train_model(X_train, y_train, X_test, y_test, cat_cols, num_cols, model_name
     print("\nClassification Report:")
     print(classification_report(y_test, test_predictions, target_names=["Tepat Waktu", "Terlambat"], zero_division=0))
 
-    model_path = MODEL_DIR / f"{model_name}.joblib"
-    meta_path = MODEL_DIR / f"{model_name}_metadata.json"
+    out_dir = model_dir()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    model_path = out_dir / f"{model_name}.joblib"
+    meta_path = out_dir / f"{model_name}_metadata.json"
 
     joblib.dump(model_final, model_path)
 
@@ -290,8 +291,9 @@ def train_model(X_train, y_train, X_test, y_test, cat_cols, num_cols, model_name
 
 
 def load_model(model_name):
-    model_path = MODEL_DIR / f"{model_name}.joblib"
-    meta_path = MODEL_DIR / f"{model_name}_metadata.json"
+    out_dir = model_dir()
+    model_path = out_dir / f"{model_name}.joblib"
+    meta_path = out_dir / f"{model_name}_metadata.json"
     model = joblib.load(model_path)
     with open(meta_path) as f:
         metadata = json.load(f)

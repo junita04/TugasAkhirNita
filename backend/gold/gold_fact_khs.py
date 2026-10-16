@@ -2,13 +2,10 @@ from pyspark.sql import functions as F
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.namespaces import table
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-# Katalog HMS-backed agar tabel terlihat oleh Trino
-GOLD_CATALOG = "hive_iceberg"
-GOLD_TABLE_FACT = f"{GOLD_CATALOG}.gold.fact_khs"
 
 # Grain: 1 baris = 1 mahasiswa (satu IP + satu SKS per mahasiswa).
 FACT_KHS_COLUMNS = ["id_mahasiswa", "ip", "sks", "jumlah_data_khs"]
@@ -26,7 +23,7 @@ def process_gold_fact_khs():
     # Membaca Silver Layer (sumber Gold HANYA dari Silver)
     # =====================================================
 
-    df = spark.table(f"{GOLD_CATALOG}.silver.silver_khs")
+    df = spark.table(table("silver", "silver_khs"))
 
     logger.info(f"Rows Silver silver_khs : {df.count()}")
 
@@ -48,7 +45,7 @@ def process_gold_fact_khs():
     # =====================================================
 
     (
-        df.writeTo(GOLD_TABLE_FACT)
+        df.writeTo(table("gold", "fact_khs"))
         .using("iceberg")
         .createOrReplace()
     )

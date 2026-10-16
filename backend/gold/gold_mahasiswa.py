@@ -3,14 +3,10 @@ from pyspark.sql.types import IntegerType
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.namespaces import table
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-# Katalog HMS-backed agar tabel terlihat oleh Trino
-GOLD_CATALOG = "hive_iceberg"
-GOLD_TABLE_DIM = f"{GOLD_CATALOG}.gold.dim_mahasiswa"
-GOLD_TABLE_FACT = f"{GOLD_CATALOG}.gold.fact_khs"
 
 # ============================================================
 # Target SKS per semester (dari baseline notebook)
@@ -55,8 +51,8 @@ def process_gold_dim_mahasiswa():
     # Membaca Silver Layer (sumber Gold HANYA dari Silver)
     # =====================================================
 
-    mahasiswa = spark.table(f"{GOLD_CATALOG}.silver.silver_mahasiswa")
-    khs = spark.table(GOLD_TABLE_FACT)
+    mahasiswa = spark.table(table("silver", "silver_mahasiswa"))
+    khs = spark.table(table("gold", "fact_khs"))
 
     logger.info(f"Rows Silver silver_mahasiswa : {mahasiswa.count()}")
     logger.info(f"Rows Gold fact_khs          : {khs.count()}")
@@ -144,7 +140,7 @@ def process_gold_dim_mahasiswa():
     # =====================================================
 
     (
-        df.writeTo(GOLD_TABLE_DIM)
+        df.writeTo(table("gold", "dim_mahasiswa"))
         .using("iceberg")
         .createOrReplace()
     )

@@ -3,6 +3,7 @@ from pyspark.sql.types import IntegerType
 
 from backend.spark.session import get_spark
 from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.namespaces import table
 from backend.utils.logger import get_logger
 
 from backend.feature_store.feature_engineering import (
@@ -13,10 +14,6 @@ from backend.feature_store.feature_engineering import (
 )
 
 logger = get_logger(__name__)
-
-# Katalog HMS-backed agar tabel terlihat oleh Trino
-FE_CATALOG = "hive_iceberg"
-TRAINING_TABLE = f"{FE_CATALOG}.feature_store.training_dataset"
 
 # Angkatan training
 TRAINING_ANGKATAN = list(range(2012, 2022))  # 2012-2021
@@ -133,7 +130,7 @@ def create_training_dataset(joined):
     # =====================================================
 
     (
-        training_df.writeTo(TRAINING_TABLE)
+        training_df.writeTo(table("feature_store", "training_dataset"))
         .using("iceberg")
         .createOrReplace()
     )
@@ -152,7 +149,7 @@ def create_training_dataset(joined):
         logger.info(f"  Angkatan {row['angkatan']}: {row['count']}")
 
     report = {
-        "table": TRAINING_TABLE,
+        "table": table("feature_store", "training_dataset"),
         "jumlah_awal_angkatan_2012_2021": total_angkatan,
         "jumlah_lulus": total_lulus,
         "jumlah_aktif_dilabeli_1": total_aktif,

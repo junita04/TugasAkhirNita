@@ -14,7 +14,7 @@ from airflow.operators.python import PythonOperator
 # Iceberg (lihat backend/feature_store/ml_export.py). Task ini TIDAK menulis
 # tabel apa pun.
 #
-# Menggunakan dataset baru `(asli)req_data_rut (baru).xlsx`.
+# Menggunakan dataset baru `(asli)req_data_rut (baruu).xlsx`.
 # Tiap tahap dipisahkan menjadi task Airflow tersendiri agar durasi NATIVE
 # tiap tahap (bronze/silver/gold/feature_store) terekam di metadata Airflow.
 #
@@ -35,7 +35,7 @@ DEFAULT_ARGS = {
     "catchup": False,
 }
 
-FILE_NAME = "(asli)req_data_rut (baru).xlsx"
+FILE_NAME = "(asli)req_data_rut (baruu).xlsx"
 
 
 def _boot():

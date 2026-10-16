@@ -6,21 +6,19 @@ from backend.gold.gold_prodi import process_gold_program_studi
 from backend.gold.gold_kurikulum import process_gold_kurikulum
 
 from backend.spark.session import get_spark
-from backend.config.settings import ICEBERG_NAMESPACE, DATA_DIR
+from backend.config.settings import ICEBERG_NAMESPACE
+from backend.config.namespaces import table, data_output_dir
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-# Katalog HMS-backed agar tabel terlihat oleh Trino
-GOLD_CATALOG = "hive_iceberg"
 
 
 def _validate_star_schema():
 
     spark = get_spark("TugasAkhirNita - Gold Validation")
 
-    dim = spark.table(f"{GOLD_CATALOG}.gold.dim_mahasiswa")
-    fact = spark.table(f"{GOLD_CATALOG}.gold.fact_khs")
+    dim = spark.table(table("gold", "dim_mahasiswa"))
+    fact = spark.table(table("gold", "fact_khs"))
 
     print()
     print("=" * 88)
@@ -204,7 +202,7 @@ def _export_gold_to_excel():
     logger.info("EXPORT GOLD KE EXCEL")
     logger.info("=" * 60)
 
-    dim = spark.table(f"{GOLD_CATALOG}.gold.dim_mahasiswa")
+    dim = spark.table(table("gold", "dim_mahasiswa"))
 
     row_count = dim.count()
     logger.info(f"Rows dim_mahasiswa : {row_count}")
@@ -223,7 +221,9 @@ def _export_gold_to_excel():
     # Convert ke pandas lalu ke Excel
     pandas_df = df_export.toPandas()
 
-    export_path = DATA_DIR / "gold_dim_mahasiswa_join.xlsx"
+    export_dir = data_output_dir()
+    export_dir.mkdir(parents=True, exist_ok=True)
+    export_path = export_dir / "gold_dim_mahasiswa_join.xlsx"
     pandas_df.to_excel(export_path, index=False, engine="openpyxl")
 
     logger.info(f"Exported ke : {export_path}")

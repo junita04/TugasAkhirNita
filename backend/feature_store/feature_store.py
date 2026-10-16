@@ -12,7 +12,7 @@ from backend.feature_store.training_dataset import (
 from backend.feature_store.inference_dataset import (
     create_inference_dataset,
 )
-from backend.config.settings import LOG_DIR
+from backend.config.namespaces import log_dir
 
 logger = get_logger(__name__)
 
@@ -56,8 +56,8 @@ def run_feature_store():
         "feature_x": FEATURE_X,
     }
 
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    json_path = LOG_DIR / "feature_store_quality_report.json"
+    json_path = log_dir() / "feature_store_quality_report.json"
+    json_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(json_path, "w", encoding="utf-8") as fh:
         json.dump(quality_report, fh, ensure_ascii=False, indent=2, default=str)
